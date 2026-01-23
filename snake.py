@@ -22,7 +22,8 @@ FPS = 10
 font = pygame.font.Font(None, 36)
 
 # Snake is a list of [x, y] segments (head is index 0)
-snake = [[100, 50]]
+# Start snake centered and aligned to the CELL grid so it can collide with food
+snake = [[(width // 2) // CELL * CELL, (height // 2) // CELL * CELL]]
 # Start moving right
 direction = [CELL, 0]
 
