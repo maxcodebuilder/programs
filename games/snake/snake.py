@@ -83,7 +83,7 @@ while True:
         food = random_food()
     else:
         snake.pop()
-
+    
     # Draw everything
     screen.fill(WHITE)
     # Draw food
