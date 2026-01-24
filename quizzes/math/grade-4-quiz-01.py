@@ -8,6 +8,8 @@
 # - Invalid inputs are rejected and the script will re-prompt until a valid letter is entered.
 # - Use `--seed N` to reproduce a particular shuffled order for testing.
 # - Use `--no-shuffle` to disable shuffling of both questions and choices.
+# - Use `--count N` to specify how many questions to ask in a session
+#   (fixed questions are kept and generated questions will be added if needed).
 
 import random
 import argparse
@@ -15,15 +17,19 @@ import argparse
 parser = argparse.ArgumentParser(description="Grade 4 math quiz")
 parser.add_argument('--no-shuffle', action='store_true', help='Disable shuffling of questions and choices')
 parser.add_argument('--seed', type=int, default=None, help='Optional RNG seed for reproducible shuffling')
+parser.add_argument('--count', type=int, default=None, help='Number of questions to ask in this session')
 args = parser.parse_args()
 
 print("====================================================")
 print(" Quiz: Math club — Grade 4 Quiz 01 ".center(52))
 print("====================================================")
 
-# If a seed is provided, use it for reproducible shuffling; otherwise do not set a seed
+# If a seed is provided, use it for reproducible shuffling; otherwise seed
+# from system entropy so each run is different by default
 if args.seed is not None:
     random.seed(args.seed)
+else:
+    random.seed()
 
 # Enable shuffling of questions and choices (toggleable via --no-shuffle)
 shuffle_questions = not args.no_shuffle
@@ -63,6 +69,125 @@ if shuffle_questions:
 
 score = 0
 
+# --- Question generators -------------------------------------------------
+def gen_multiplication(a_min=2, a_max=20, b_min=2, b_max=20):
+    a = random.randint(a_min, a_max)
+    b = random.randint(b_min, b_max)
+    correct = a * b
+    # generate 3 distractors
+    distractors = set()
+    attempts = 0
+    while len(distractors) < 3 and attempts < 50:
+        attempts += 1
+        # small perturbation or swapped digits
+        delta = random.choice([-3, -2, -1, 1, 2, 3, 10])
+        cand = correct + delta
+        if cand != correct and cand > 0:
+            distractors.add(str(cand))
+    choices = [str(correct)] + list(distractors)
+    random.shuffle(choices)
+    correct_index = choices.index(str(correct))
+    return {"text": f"What is {a} x {b}?", "choices": choices, "correct": correct_index}
+
+def gen_large_multiplication(a_min=100, a_max=200, b_min=2, b_max=9):
+    a = random.randint(a_min, a_max)
+    b = random.randint(b_min, b_max)
+    correct = a * b
+    distractors = set()
+    attempts = 0
+    while len(distractors) < 3 and attempts < 50:
+        attempts += 1
+        cand = correct + random.choice([-50, -10, 10, 50, 100])
+        if cand != correct and cand > 0:
+            distractors.add(str(cand))
+    choices = [str(correct)] + list(distractors)
+    random.shuffle(choices)
+    correct_index = choices.index(str(correct))
+    return {"text": f"What is {a} x {b}?", "choices": choices, "correct": correct_index}
+
+def gen_fraction_decimal():
+    # produce fraction with denominator 10 or 100 so decimal is exact
+    denom = random.choice([10, 100])
+    num = random.randint(1, denom - 1)
+    correct = num / denom
+    correct_str = str(correct).rstrip('0').rstrip('.') if denom == 100 and correct != int(correct) else str(correct)
+    distractors = set()
+    attempts = 0
+    while len(distractors) < 3 and attempts < 50:
+        attempts += 1
+        d = num + random.choice([-3, -2, -1, 1, 2, 3])
+        if 0 < d < denom:
+            val = d / denom
+            s = str(val).rstrip('0').rstrip('.')
+            if s != correct_str:
+                distractors.add(s)
+    choices = [correct_str] + list(distractors)
+    random.shuffle(choices)
+    correct_index = choices.index(correct_str)
+    return {"text": f"What is {num}/{denom} as a decimal?", "choices": choices, "correct": correct_index}
+
+def gen_fraction_simplify():
+    # generate numerator/denom with gcd>1
+    while True:
+        denom = random.randint(2, 12)
+        num = random.randint(2, denom)
+        from math import gcd
+        g = gcd(num, denom)
+        if g > 1:
+            simp_num = num // g
+            simp_den = denom // g
+            break
+    correct = f"{simp_num}/{simp_den}"
+    distractors = set()
+    attempts = 0
+    while len(distractors) < 3 and attempts < 50:
+        attempts += 1
+        # produce incorrect simplifications
+        a = random.randint(1, denom)
+        b = random.randint(1, denom)
+        s = f"{a}/{b}"
+        if s != correct:
+            distractors.add(s)
+    choices = [correct] + list(distractors)
+    random.shuffle(choices)
+    correct_index = choices.index(correct)
+    return {"text": f"What is {num}/{denom} as a fraction in simplest form?", "choices": choices, "correct": correct_index}
+
+# pool of generator functions to create extra questions
+GENERATORS = [gen_multiplication, gen_large_multiplication, gen_fraction_decimal, gen_fraction_simplify]
+
+# Build final question list according to requested count and interleave generated questions
+fixed = questions[:]  # keep original fixed pool
+generated = []
+desired = args.count if args.count is not None else len(fixed)
+
+if desired > len(fixed):
+    needed = desired - len(fixed)
+    for _ in range(needed):
+        gen = random.choice(GENERATORS)
+        generated.append(gen())
+
+# Optionally shuffle each pool before interleaving to keep randomness
+if shuffle_questions:
+    random.shuffle(fixed)
+    random.shuffle(generated)
+
+# Interleave fixed and generated questions
+if generated:
+    combined = []
+    maxn = max(len(fixed), len(generated))
+    for i in range(maxn):
+        if i < len(fixed):
+            combined.append(fixed[i])
+        if i < len(generated):
+            combined.append(generated[i])
+else:
+    combined = fixed
+
+questions = combined[:desired]
+
+quit_early = False
+
 for i, q in enumerate(questions, start=1):
     # Shuffle choices while tracking where the correct answer ends up
     if shuffle_choices:
@@ -83,10 +208,19 @@ for i, q in enumerate(questions, start=1):
 
     # Input validation: re-prompt until valid
     while True:
-        answer = input(f"Enter your answer ({', '.join(valid_letters)}): ").strip().upper()
+        try:
+            answer = input(f"Enter your answer ({', '.join(valid_letters)}): ").strip().upper()
+        except EOFError:
+            # piped input ended; exit the quiz early but print current score
+            print("\nNo more input detected — ending quiz early.")
+            quit_early = True
+            break
         if answer in valid_letters:
             break
         print(f"Please enter one of: {', '.join(valid_letters)}")
+
+    if quit_early:
+        break
 
     selected_index = ord(answer) - ord('A')
     if selected_index == correct_index:
