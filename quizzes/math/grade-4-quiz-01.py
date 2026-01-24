@@ -156,6 +156,145 @@ def gen_fraction_simplify():
 # pool of generator functions to create extra questions
 GENERATORS = [gen_multiplication, gen_large_multiplication, gen_fraction_decimal, gen_fraction_simplify]
 
+# Additional 4th-grade-level generators
+def gen_addition():
+    a = random.randint(0, 100)
+    b = random.randint(0, 100)
+    correct = a + b
+    distractors = set()
+    while len(distractors) < 3:
+        cand = correct + random.choice([-10, -5, -1, 1, 2, 5, 10])
+        if cand >= 0 and cand != correct:
+            distractors.add(str(cand))
+    choices = [str(correct)] + list(distractors)
+    random.shuffle(choices)
+    return {"text": f"What is {a} + {b}?", "choices": choices, "correct": choices.index(str(correct))}
+
+def gen_subtraction():
+    a = random.randint(0, 100)
+    b = random.randint(0, a)
+    correct = a - b
+    distractors = set()
+    while len(distractors) < 3:
+        cand = correct + random.choice([-6, -3, -1, 1, 3, 6])
+        if cand >= 0 and cand != correct:
+            distractors.add(str(cand))
+    choices = [str(correct)] + list(distractors)
+    random.shuffle(choices)
+    return {"text": f"What is {a} - {b}?", "choices": choices, "correct": choices.index(str(correct))}
+
+def gen_division_exact():
+    b = random.randint(2, 12)
+    q = random.randint(2, 12)
+    a = b * q
+    correct = q
+    distractors = set()
+    while len(distractors) < 3:
+        cand = correct + random.choice([-3, -2, -1, 1, 2, 3])
+        if cand > 0 and cand != correct:
+            distractors.add(str(cand))
+    choices = [str(correct)] + list(distractors)
+    random.shuffle(choices)
+    return {"text": f"What is {a} ÷ {b}?", "choices": choices, "correct": choices.index(str(correct))}
+
+def gen_missing_addend():
+    b = random.randint(0, 50)
+    x = random.randint(0, 50)
+    total = x + b
+    correct = x
+    distractors = set()
+    while len(distractors) < 3:
+        cand = correct + random.choice([-5, -2, -1, 1, 2, 5])
+        if cand >= 0 and cand != correct:
+            distractors.add(str(cand))
+    choices = [str(correct)] + list(distractors)
+    random.shuffle(choices)
+    return {"text": f"What number plus {b} equals {total}?", "choices": choices, "correct": choices.index(str(correct))}
+
+def gen_round_tens():
+    n = random.randint(10, 99)
+    correct = str(round(n, -1))
+    distractors = {str(max(0, round(n + d, -1))) for d in (-15, -7, 7, 15)}
+    distractors.discard(correct)
+    while len(distractors) < 3:
+        distractors.add(str(round(n + random.choice([-12, -6, 6, 12]), -1)))
+    choices = [correct] + list(distractors)[:3]
+    random.shuffle(choices)
+    return {"text": f"Round {n} to the nearest ten.", "choices": choices, "correct": choices.index(correct)}
+
+def gen_time_add():
+    hour = random.randint(1, 11)
+    minute = random.choice([0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55])
+    add_m = random.choice([5, 10, 15, 20, 30, 45])
+    total_min = hour * 60 + minute + add_m
+    new_hour = ((total_min // 60 - 1) % 12) + 1
+    new_min = total_min % 60
+    correct = f"{new_hour}:{new_min:02d}"
+    distractors = set()
+    while len(distractors) < 3:
+        m = (new_min + random.choice([-15, -10, -5, 5, 10, 15])) % 60
+        h = new_hour
+        if m > new_min and new_min - 30 > 0:
+            h = (new_hour - 1 - 1) % 12 + 1
+        cand = f"{h}:{m:02d}"
+        if cand != correct:
+            distractors.add(cand)
+    choices = [correct] + list(distractors)
+    random.shuffle(choices)
+    return {"text": f"What time is {hour}:{minute:02d} plus {add_m} minutes?", "choices": choices, "correct": choices.index(correct)}
+
+def gen_money_change():
+    cost = random.choice([random.randint(1, 20) + random.choice([0, .25, .5, .75]) for _ in range(5)])
+    paid = random.choice([round(cost + d, 2) for d in (0.25, 0.5, 1, 2, 5)])
+    correct = round(paid - cost, 2)
+    distractors = set()
+    while len(distractors) < 3:
+        cand = round(correct + random.choice([-1, -0.5, 0.5, 1, 2]), 2)
+        if cand >= 0 and cand != correct:
+            distractors.add(f"${cand:.2f}")
+    choices = [f"${correct:.2f}"] + list(distractors)
+    random.shuffle(choices)
+    return {"text": f"You pay ${paid:.2f} for an item that costs ${cost:.2f}. How much change should you get?", "choices": choices, "correct": choices.index(f"${correct:.2f}")}
+
+def gen_area_rectangle():
+    l = random.randint(1, 12)
+    w = random.randint(1, 12)
+    correct = l * w
+    distractors = set()
+    while len(distractors) < 3:
+        cand = correct + random.choice([-l, -w, -2, 2, l, w])
+        if cand > 0 and cand != correct:
+            distractors.add(str(cand))
+    choices = [str(correct)] + list(distractors)
+    random.shuffle(choices)
+    return {"text": f"What is the area of a {l} by {w} rectangle (in square units)?", "choices": choices, "correct": choices.index(str(correct))}
+
+def gen_compare_numbers():
+    a = random.randint(1, 100)
+    b = random.randint(1, 100)
+    if a < b:
+        corr = "<"
+    elif a > b:
+        corr = ">"
+    else:
+        corr = "="
+    choices = ["<", ">", "="]
+    random.shuffle(choices)
+    return {"text": f"Which is true: {a} ? {b}", "choices": choices, "correct": choices.index(corr)}
+
+# Extend GENERATORS with the new types
+GENERATORS.extend([
+    gen_addition,
+    gen_subtraction,
+    gen_division_exact,
+    gen_missing_addend,
+    gen_round_tens,
+    gen_time_add,
+    gen_money_change,
+    gen_area_rectangle,
+    gen_compare_numbers,
+])
+
 # Build final question list according to requested count and interleave generated questions
 fixed = questions[:]  # keep original fixed pool
 generated = []
