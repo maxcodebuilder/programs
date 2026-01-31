@@ -4,6 +4,7 @@ import random
 import json
 import os
 import time
+import math
 
 # Geometry Dash - Mini
 # Features: auto-scroll, precise single jump, spikes and blocks, score (distance), best score saved.
@@ -19,12 +20,19 @@ PLAYER_X = 120
 OBSTACLE_WIDTH = 30
 # gameplay: how many jumps allowed before touching ground (2 = double-jump)
 MAX_JUMPS = 2
+# difficulty multiplier: >1 makes curve steeper (harder earlier), <1 makes it shallower
+DIFFICULTY = 1.0
+MIN_DIFFICULTY = 0.3
+MAX_DIFFICULTY = 3.0
+DIFF_STEP = 0.1
+DIFF_MSG_DURATION = 1.6
 
 SAVE_FILE = os.path.join(os.path.dirname(__file__), "geometry_save.json")
 
 pygame.init()
 pygame.font.init()
 FONT = pygame.font.SysFont("Arial", 22)
+FONT_BIG = pygame.font.SysFont("Arial", 56)
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Geometry Dash - Mini")
@@ -93,23 +101,25 @@ class Level:
         sections = 50
         for section in range(sections):
             t = section / max(1, sections - 1)  # 0..1 progression through level
+            # adjust progression by global difficulty multiplier
+            t_adj = min(1.0, t * DIFFICULTY)
             # gaps shrink as t increases (start easier -> larger gaps)
-            min_gap = max(140, int(300 - 140 * t))
-            max_gap = max(220, int(500 - 300 * t))
+            min_gap = max(120, int(320 - 160 * t_adj))
+            max_gap = max(180, int(520 - 340 * t_adj))
             gap = rng.randint(min_gap, max_gap)
 
-            # cluster chance increases with t
-            cluster_chance = 0.1 + 0.45 * t
+            # cluster chance increases with adjusted t
+            cluster_chance = 0.08 + 0.5 * t_adj
             if rng.random() < cluster_chance:
                 # cluster of spikes/blocks; early clusters are smaller
-                cluster_count = rng.randint(1, 2 + int(2 * t))
+                cluster_count = rng.randint(1, 2 + int(2 * t_adj))
                 for i in range(cluster_count):
-                    h = rng.randint(24, 60 + int(40 * t))
+                    h = rng.randint(24, 60 + int(40 * t_adj))
                     self.objects.append((x + i * (OBSTACLE_WIDTH + 8), 'block', OBSTACLE_WIDTH, h))
                 x += gap
             else:
-                # single block, height grows slightly with t
-                h = rng.randint(24, 60 + int(40 * t))
+                # single block, height grows slightly with t_adj
+                h = rng.randint(24, 60 + int(40 * t_adj))
                 self.objects.append((x, 'block', OBSTACLE_WIDTH, h))
                 x += gap
 
@@ -119,6 +129,36 @@ class Level:
 def draw_text(surf, txt, x, y, color=(255, 255, 255)):
     img = FONT.render(txt, True, color)
     surf.blit(img, (x, y))
+
+
+def difficulty_label(d: float) -> str:
+    """Return a Geometry Dash-style difficulty label for a numeric difficulty."""
+    if d <= 0.5:
+        return "Easy"
+    if d <= 1.0:
+        return "Normal"
+    if d <= 1.5:
+        return "Hard"
+    if d <= 2.0:
+        return "Harder"
+    if d <= 2.5:
+        return "Insane"
+    return "Demon"
+
+
+def difficulty_color(d: float):
+    # map difficulty to an attention-grabbing color
+    if d <= 0.5:
+        return (90, 200, 120)  # green
+    if d <= 1.0:
+        return (120, 180, 240)  # blue
+    if d <= 1.5:
+        return (255, 200, 60)  # yellow
+    if d <= 2.0:
+        return (255, 140, 40)  # orange
+    if d <= 2.5:
+        return (220, 80, 120)  # purple/pink
+    return (220, 40, 40)  # red (demon)
 
 
 def save_best(best):
@@ -147,9 +187,12 @@ def main():
     player = Player()
     level = Level(seed=LEVEL_SEEDS[level_index])
     obstacles = [Obstacle(x, w, h) for (x, t, w, h) in level.objects]
+    diff_msg = None
+    diff_msg_time = 0.0
 
     scroll = 0.0
-    speed = 340.0  # horizontal scroll speed (px/s)
+    # start a bit slower so early sections feel easier
+    speed = 260.0  # horizontal scroll speed (px/s)
     running = True
     game_over = False
     start_time = time.time()
@@ -198,6 +241,31 @@ def main():
                         game_over = False
                 elif event.key == pygame.K_ESCAPE:
                     running = False
+                # difficulty controls (bracket keys)
+                elif event.key == pygame.K_LEFTBRACKET:
+                    DIFF = max(MIN_DIFFICULTY, DIFFICULTY - DIFF_STEP)
+                    globals()['DIFFICULTY'] = DIFF
+                    # regenerate level with same seed to reflect new difficulty curve
+                    level = Level(seed=LEVEL_SEEDS[level_index])
+                    obstacles = [Obstacle(x, w, h) for (x, t, w, h) in level.objects]
+                    scroll = 0.0
+                    start_time = time.time()
+                    score = 0.0
+                    game_over = False
+                    # visual feedback
+                    diff_msg = f"Difficulty: {difficulty_label(DIFF)} ({DIFF:.1f})"
+                    diff_msg_time = time.time()
+                elif event.key == pygame.K_RIGHTBRACKET:
+                    DIFF = min(MAX_DIFFICULTY, DIFFICULTY + DIFF_STEP)
+                    globals()['DIFFICULTY'] = DIFF
+                    level = Level(seed=LEVEL_SEEDS[level_index])
+                    obstacles = [Obstacle(x, w, h) for (x, t, w, h) in level.objects]
+                    scroll = 0.0
+                    start_time = time.time()
+                    score = 0.0
+                    game_over = False
+                    diff_msg = f"Difficulty: {difficulty_label(DIFF)} ({DIFF:.1f})"
+                    diff_msg_time = time.time()
 
         if not game_over:
             # update player
@@ -222,8 +290,8 @@ def main():
 
             # update score
             score = (time.time() - start_time) * 10.0  # scale to make score increase faster
-            # gradually increase speed
-            speed = 340.0 + score * 2.0
+            # gradually increase speed more strongly as you progress; scale with DIFFICULTY
+            speed = 260.0 + score * (3.0 * DIFFICULTY)
 
         # draw
         screen.fill((30, 30, 30))
@@ -250,10 +318,53 @@ def main():
         # HUD
         draw_text(screen, f"Score: {int(score)}", 12, 12)
         draw_text(screen, f"Best: {best}", 12, 38)
-        draw_text(screen, "Space/Up: jump  R: restart  Esc: quit", 12, 64)
+        draw_text(screen, f"Difficulty: {DIFFICULTY:.1f}  ( [ / ] to change )", 12, 64)
+        draw_text(screen, "Space/Up: jump  R: restart  Esc: quit", 12, 90)
+
+        # difficulty/progress bar (shows how far through level and relative difficulty)
+        prog = min(1.0, scroll / max(1.0, level.length))
+        bar_w = int((WIDTH - 24) * prog)
+        pygame.draw.rect(screen, (80, 80, 80), (12, HEIGHT - 28, WIDTH - 24, 12))
+        pygame.draw.rect(screen, (200, 120, 40), (12, HEIGHT - 28, bar_w, 12))
 
         if game_over:
             draw_text(screen, "GAME OVER - Press Space or R to restart", WIDTH // 2 - 200, HEIGHT // 2 - 10, (240, 80, 80))
+
+        # show transient difficulty message when changed (bigger, colored, pulsing)
+        if diff_msg is not None:
+            elapsed = time.time() - diff_msg_time
+            if elapsed < DIFF_MSG_DURATION:
+                fade = 1.0 - (elapsed / DIFF_MSG_DURATION)
+                # pulsing scale that damps as message ages
+                pulse = 1.0 + 0.25 * math.sin(elapsed * 8.0)
+                scale = 1.0 + (pulse - 1.0) * fade
+                # choose a color based on current numeric DIFFICULTY
+                color = difficulty_color(DIFFICULTY)
+
+                surf = FONT_BIG.render(diff_msg, True, color)
+                sw, sh = surf.get_size()
+                sw2 = max(1, int(sw * scale))
+                sh2 = max(1, int(sh * scale))
+                try:
+                    surf2 = pygame.transform.smoothscale(surf, (sw2, sh2))
+                except Exception:
+                    surf2 = surf
+
+                # shadow/background for contrast
+                bx = WIDTH // 2 - sw2 // 2 - 12
+                by = HEIGHT // 2 - 60 - 8
+                pygame.draw.rect(screen, (10, 10, 10), (bx, by, sw2 + 24, sh2 + 16))
+
+                # apply fade alpha
+                alpha = int(255 * fade)
+                try:
+                    surf2.set_alpha(alpha)
+                except Exception:
+                    pass
+
+                screen.blit(surf2, (WIDTH // 2 - sw2 // 2, HEIGHT // 2 - 60))
+            else:
+                diff_msg = None
 
         pygame.display.flip()
 
