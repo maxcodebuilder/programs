@@ -26,6 +26,17 @@ class Upgrade:
 		return int(self.base_price * (1.15 ** self.amount))
 
 
+class UpgradeItem:
+	"""One-time or repeatable upgrade that modifies game behaviour."""
+	def __init__(self, name, price, kind, value, target=None):
+		self.name = name
+		self.price = price
+		self.kind = kind  # 'click_add', 'global_cps_mult', 'building_cps_mult'
+		self.value = value
+		self.target = target
+		self.amount = 0
+
+
 class CookieClicker:
 	def __init__(self, root):
 		self.root = root
@@ -37,12 +48,25 @@ class CookieClicker:
 		# base click gives 1 cookie
 		self.base_click = 1
 
-		# define upgrades
+		# define buildings (automated CPS generators)
 		self.upgrades = [
 			Upgrade("Cursor", 15, cps=0.1),
 			Upgrade("Grandma", 100, cps=1),
 			Upgrade("Farm", 1100, cps=8),
+			Upgrade("Mine", 12000, cps=47),
+			Upgrade("Factory", 130000, cps=260),
 		]
+
+		# upgrade items (apply effects)
+		self.upgrade_items = [
+			UpgradeItem("Reinforced Clicks", 100, kind="click_add", value=1),
+			UpgradeItem("Efficient Grandmas", 500, kind="building_cps_mult", value=2.0, target="Grandma"),
+			UpgradeItem("Turbo CPS", 2000, kind="global_cps_mult", value=1.5),
+		]
+
+		# multipliers applied by upgrades
+		self.cps_multiplier = 1.0
+		self.building_multipliers = {}
 
 		# UI layout
 		main = ttk.Frame(root, padding=12)
@@ -82,6 +106,23 @@ class CookieClicker:
 			btn.pack(side=tk.RIGHT)
 			self.upgrade_frames.append((up, amt, price, btn))
 
+		# upgrades (one-time/purchasable modifiers)
+		upgrades_frame = ttk.LabelFrame(main, text="Upgrades")
+		upgrades_frame.pack(fill=tk.BOTH, expand=True, pady=(6, 0))
+		self.upgrade_item_frames = []
+		for ui in self.upgrade_items:
+			f2 = ttk.Frame(upgrades_frame)
+			f2.pack(fill=tk.X, pady=4)
+			name2 = ttk.Label(f2, text=ui.name)
+			name2.pack(side=tk.LEFT)
+			amt2 = ttk.Label(f2, text=f"Owned: {ui.amount}")
+			amt2.pack(side=tk.LEFT, padx=8)
+			price2 = ttk.Label(f2, text=f"Price: {ui.price}")
+			price2.pack(side=tk.LEFT, padx=8)
+			btn2 = ttk.Button(f2, text="Buy", command=lambda u=ui: self.buy_upgrade(u))
+			btn2.pack(side=tk.RIGHT)
+			self.upgrade_item_frames.append((ui, amt2, price2, btn2))
+
 		# bottom controls
 		bottom = ttk.Frame(main)
 		bottom.pack(fill=tk.X, pady=(8, 0))
@@ -114,8 +155,25 @@ class CookieClicker:
 			up.amount += 1
 			self._update_ui()
 
+	def buy_upgrade(self, ui: UpgradeItem):
+		if self.cookies >= ui.price:
+			self.cookies -= ui.price
+			ui.amount += 1
+			# apply effect
+			if ui.kind == "click_add":
+				self.base_click += ui.value
+			elif ui.kind == "global_cps_mult":
+				self.cps_multiplier *= ui.value
+			elif ui.kind == "building_cps_mult":
+				self.building_multipliers[ui.target] = self.building_multipliers.get(ui.target, 1.0) * ui.value
+			self._update_ui()
+
 	def cps(self):
-		return sum(u.cps * u.amount for u in self.upgrades)
+		total = 0.0
+		for u in self.upgrades:
+			bm = self.building_multipliers.get(u.name, 1.0)
+			total += u.cps * u.amount * bm
+		return total * self.cps_multiplier
 
 	def _update_ui(self):
 		# apply CPS increment
@@ -130,8 +188,15 @@ class CookieClicker:
 		for up, amt_label, price_label, btn in self.upgrade_frames:
 			amt_label.config(text=f"Owned: {up.amount}")
 			price_label.config(text=f"Price: {up.price}")
-			# enable/disable buy button based on affordability
 			if self.cookies >= up.price:
+				btn.config(state=tk.NORMAL)
+			else:
+				btn.config(state=tk.DISABLED)
+
+		for ui, amt_label, price_label, btn in self.upgrade_item_frames:
+			amt_label.config(text=f"Owned: {ui.amount}")
+			price_label.config(text=f"Price: {ui.price}")
+			if self.cookies >= ui.price:
 				btn.config(state=tk.NORMAL)
 			else:
 				btn.config(state=tk.DISABLED)
@@ -145,6 +210,7 @@ class CookieClicker:
 			"cookies": self.cookies,
 			"total_cookies": self.total_cookies,
 			"upgrades": [{"name": u.name, "amount": u.amount} for u in self.upgrades],
+			"upgrade_items": [{"name": ui.name, "amount": ui.amount} for ui in self.upgrade_items],
 		}
 		try:
 			with open(SAVE_FILE, "w") as f:
@@ -163,6 +229,20 @@ class CookieClicker:
 			up_map = {u["name"]: u for u in data.get("upgrades", [])}
 			for u in self.upgrades:
 				u.amount = up_map.get(u.name, {}).get("amount", 0)
+			# load upgrade items and reapply their effects
+			uim_map = {u["name"]: u for u in data.get("upgrade_items", [])}
+			# reset effects
+			self.cps_multiplier = 1.0
+			self.building_multipliers = {}
+			for ui in self.upgrade_items:
+				ui.amount = uim_map.get(ui.name, {}).get("amount", 0)
+				for _ in range(ui.amount):
+					if ui.kind == "click_add":
+						self.base_click += ui.value
+					elif ui.kind == "global_cps_mult":
+						self.cps_multiplier *= ui.value
+					elif ui.kind == "building_cps_mult":
+						self.building_multipliers[ui.target] = self.building_multipliers.get(ui.target, 1.0) * ui.value
 		except Exception:
 			pass
 
