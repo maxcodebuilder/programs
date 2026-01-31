@@ -5,6 +5,7 @@ import os
 TK_AVAILABLE = False
 tk = None
 ttk = None
+import curses
 import time
 
 
@@ -261,7 +262,10 @@ def main():
 
 
 def terminal_main():
-	print("Running Cookie Clicker in terminal mode (text interface). Type 'help' for commands.")
+	stdscr = curses.initscr()
+	curses.curs_set(0)
+	stdscr.nodelay(True)
+	stdscr.timeout(100)
 
 	cookies = 0.0
 	total_cookies = 0.0
@@ -284,163 +288,102 @@ def terminal_main():
 	building_multipliers = {}
 
 	last = time.time()
+	running = True
+	try:
+		while running:
+			now = time.time()
+			dt = now - last
+			last = now
+			# CPS income
+			cps = sum(u.cps * u.amount for u in upgrades)
+			cookies += cps * dt
 
-	def show_status():
-		cps = sum(u.cps * u.amount * building_multipliers.get(u.name, 1.0) for u in upgrades) * cps_multiplier
-		print(f"\nCookies: {int(cookies)}   CPS: {cps:.2f}   Total: {int(total_cookies)}")
-		print("Buildings:")
-		for i, u in enumerate(upgrades, start=1):
-			print(f" {i}. {u.name} | Owned: {u.amount} | Price: {u.price} | CPS each: {u.cps}")
-		print("Upgrades:")
-		for i, ui in enumerate(upgrade_items, start=1):
-			print(f" {i}. {ui.name} | Owned: {ui.amount} | Price: {ui.price} | Effect: {ui.kind} {ui.value} {ui.target or ''}")
-		print("Commands: click, buy <n>, buyup <n>, save, load, status, help, quit")
+			# draw UI
+			stdscr.erase()
+			stdscr.addstr(0, 0, "Cookie Clicker - Terminal")
+			stdscr.addstr(1, 0, f"Cookies: {int(cookies)}   CPS: {cps:.2f}")
+			stdscr.addstr(3, 0, "SPACE: click    1-5: buy building    6-8: buy upgrade    s: save    l: load    q: quit")
+			for i, u in enumerate(upgrades, start=1):
+				stdscr.addstr(4 + i, 0, f"{i}. {u.name} | Owned: {u.amount} | Price: {u.price}")
+			base_line = 6 + len(upgrades)
+			stdscr.addstr(base_line, 0, "Upgrades:")
+			for j, ui in enumerate(upgrade_items, start=1):
+				stdscr.addstr(base_line + j, 0, f"{j+5}. {ui.name} | Owned: {ui.amount} | Price: {ui.price}")
 
-	# load autosave if present
-	if os.path.exists(SAVE_FILE):
-		try:
-			with open(SAVE_FILE, "r") as f:
-				data = json.load(f)
-			cookies = data.get("cookies", 0.0)
-			total_cookies = data.get("total_cookies", 0.0)
-			up_map = {u["name"]: u for u in data.get("upgrades", [])}
-			for u in upgrades:
-				u.amount = up_map.get(u.name, {}).get("amount", 0)
-			uim_map = {u["name"]: u for u in data.get("upgrade_items", [])}
-			# reset effects and reapply
-			cps_multiplier = 1.0
-			building_multipliers = {}
-			base_click = 1
-			for ui in upgrade_items:
-				ui.amount = uim_map.get(ui.name, {}).get("amount", 0)
-				for _ in range(ui.amount):
-					if ui.kind == "click_add":
-						base_click += ui.value
-					elif ui.kind == "global_cps_mult":
-						cps_multiplier *= ui.value
-					elif ui.kind == "building_cps_mult":
-						building_multipliers[ui.target] = building_multipliers.get(ui.target, 1.0) * ui.value
-		except Exception:
-			pass
+			stdscr.refresh()
 
-	show_status()
-
-	while True:
-		# apply CPS since last command
-		now = time.time()
-		dt = now - last
-		last = now
-		cps = sum(u.cps * u.amount * building_multipliers.get(u.name, 1.0) for u in upgrades) * cps_multiplier
-		cookies += cps * dt
-		total_cookies += cps * dt
-
-		cmd = input(" > ").strip().lower()
-		if not cmd:
-			continue
-		parts = cmd.split()
-		if parts[0] in ("q", "quit", "exit"):
-			print("Saving and exiting...")
-			data = {
-				"cookies": cookies,
-				"total_cookies": total_cookies,
-				"upgrades": [{"name": u.name, "amount": u.amount} for u in upgrades],
-				"upgrade_items": [{"name": ui.name, "amount": ui.amount} for ui in upgrade_items],
-			}
-			try:
-				with open(SAVE_FILE, "w") as f:
-					json.dump(data, f)
-			except Exception:
-				pass
-			break
-		elif parts[0] in ("help", "h"):
-			show_status()
-		elif parts[0] in ("status", "s"):
-			show_status()
-		elif parts[0] == "click":
-			click_value = base_click + sum(u.click_power * u.amount for u in upgrades)
-			cookies += click_value
-			total_cookies += click_value
-			print(f"You clicked for {click_value} cookies.")
-		elif parts[0] == "buy" and len(parts) > 1:
-			try:
-				idx = int(parts[1]) - 1
-				if 0 <= idx < len(upgrades):
-					up = upgrades[idx]
-					if cookies >= up.price:
-						cookies -= up.price
-						up.amount += 1
-						print(f"Bought 1 {up.name}.")
-					else:
-						print("Not enough cookies.")
-				else:
-					print("Invalid building index.")
-			except ValueError:
-				print("Invalid index.")
-		elif parts[0] == "buyup" and len(parts) > 1:
-			try:
-				idx = int(parts[1]) - 1
-				if 0 <= idx < len(upgrade_items):
-					ui = upgrade_items[idx]
-					if cookies >= ui.price:
-						cookies -= ui.price
-						ui.amount += 1
-						if ui.kind == "click_add":
-							base_click += ui.value
-						elif ui.kind == "global_cps_mult":
-							cps_multiplier *= ui.value
-						elif ui.kind == "building_cps_mult":
-							building_multipliers[ui.target] = building_multipliers.get(ui.target, 1.0) * ui.value
-						print(f"Bought upgrade {ui.name}.")
-					else:
-						print("Not enough cookies.")
-				else:
-					print("Invalid upgrade index.")
-			except ValueError:
-				print("Invalid index.")
-		elif parts[0] == "save":
-			data = {
-				"cookies": cookies,
-				"total_cookies": total_cookies,
-				"upgrades": [{"name": u.name, "amount": u.amount} for u in upgrades],
-				"upgrade_items": [{"name": ui.name, "amount": ui.amount} for ui in upgrade_items],
-			}
-			try:
-				with open(SAVE_FILE, "w") as f:
-					json.dump(data, f)
-				print("Saved.")
-			except Exception:
-				print("Save failed.")
-		elif parts[0] == "load":
-			if os.path.exists(SAVE_FILE):
-				try:
-					with open(SAVE_FILE, "r") as f:
-						data = json.load(f)
-					cookies = data.get("cookies", 0.0)
-					total_cookies = data.get("total_cookies", 0.0)
-					up_map = {u["name"]: u for u in data.get("upgrades", [])}
-					for u in upgrades:
-						u.amount = up_map.get(u.name, {}).get("amount", 0)
-					uim_map = {u["name"]: u for u in data.get("upgrade_items", [])}
-					# reset effects and reapply
-					cps_multiplier = 1.0
-					building_multipliers = {}
-					base_click = 1
-					for ui in upgrade_items:
-						ui.amount = uim_map.get(ui.name, {}).get("amount", 0)
-						for _ in range(ui.amount):
+			c = stdscr.getch()
+			if c != -1:
+				if c in (ord('q'), ord('Q')):
+					running = False
+				elif c == ord(' '):
+					click_value = base_click + sum(u.click_power * u.amount for u in upgrades)
+					cookies += click_value
+					total_cookies += click_value
+				elif c in (ord('1'), ord('2'), ord('3'), ord('4'), ord('5')):
+					idx = int(chr(c)) - 1
+					if 0 <= idx < len(upgrades):
+						up = upgrades[idx]
+						if cookies >= up.price:
+							cookies -= up.price
+							up.amount += 1
+				elif c in (ord('6'), ord('7'), ord('8')):
+					# purchase upgrade items 1-3 mapped to keys 6-8
+					mapping = {ord('6'): 0, ord('7'): 1, ord('8'): 2}
+					ui_idx = mapping.get(c)
+					if ui_idx is not None and 0 <= ui_idx < len(upgrade_items):
+						ui = upgrade_items[ui_idx]
+						if cookies >= ui.price:
+							cookies -= ui.price
+							ui.amount += 1
 							if ui.kind == "click_add":
 								base_click += ui.value
 							elif ui.kind == "global_cps_mult":
 								cps_multiplier *= ui.value
 							elif ui.kind == "building_cps_mult":
 								building_multipliers[ui.target] = building_multipliers.get(ui.target, 1.0) * ui.value
-					print("Loaded.")
-				except Exception:
-					print("Load failed.")
-			else:
-				print("No save file.")
-		else:
-			print("Unknown command. Type 'help' for commands.")
+				elif c in (ord('s'), ord('S')):
+					data = {
+						"cookies": cookies,
+						"total_cookies": total_cookies,
+						"upgrades": [{"name": u.name, "amount": u.amount} for u in upgrades],
+						"upgrade_items": [{"name": ui.name, "amount": ui.amount} for ui in upgrade_items],
+					}
+					try:
+						with open(SAVE_FILE, "w") as f:
+							json.dump(data, f)
+					except Exception:
+						pass
+				elif c in (ord('l'), ord('L')):
+					if os.path.exists(SAVE_FILE):
+						try:
+							with open(SAVE_FILE, "r") as f:
+								data = json.load(f)
+							cookies = data.get("cookies", 0.0)
+							total_cookies = data.get("total_cookies", 0.0)
+							up_map = {u["name"]: u for u in data.get("upgrades", [])}
+							for u in upgrades:
+								u.amount = up_map.get(u.name, {}).get("amount", 0)
+							uim_map = {u["name"]: u for u in data.get("upgrade_items", [])}
+							# reset effects
+							cps_multiplier = 1.0
+							building_multipliers = {}
+							base_click = 1
+							for ui in upgrade_items:
+								ui.amount = uim_map.get(ui.name, {}).get("amount", 0)
+								for _ in range(ui.amount):
+									if ui.kind == "click_add":
+										base_click += ui.value
+									elif ui.kind == "global_cps_mult":
+										cps_multiplier *= ui.value
+									elif ui.kind == "building_cps_mult":
+										building_multipliers[ui.target] = building_multipliers.get(ui.target, 1.0) * ui.value
+						except Exception:
+							pass
+
+			time.sleep(0.05)
+	finally:
+		curses.endwin()
 
 
 if __name__ == "__main__":
