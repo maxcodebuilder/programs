@@ -274,7 +274,18 @@ def terminal_main():
 		Upgrade("Cursor", 15, cps=0.1),
 		Upgrade("Grandma", 100, cps=1),
 		Upgrade("Farm", 1100, cps=8),
+		Upgrade("Mine", 12000, cps=47),
+		Upgrade("Factory", 130000, cps=260),
 	]
+
+	upgrade_items = [
+		UpgradeItem("Reinforced Clicks", 100, kind="click_add", value=1),
+		UpgradeItem("Efficient Grandmas", 500, kind="building_cps_mult", value=2.0, target="Grandma"),
+		UpgradeItem("Turbo CPS", 2000, kind="global_cps_mult", value=1.5),
+	]
+
+	cps_multiplier = 1.0
+	building_multipliers = {}
 
 	last = time.time()
 	running = True
@@ -291,9 +302,13 @@ def terminal_main():
 			stdscr.erase()
 			stdscr.addstr(0, 0, "Cookie Clicker - Terminal")
 			stdscr.addstr(1, 0, f"Cookies: {int(cookies)}   CPS: {cps:.2f}")
-			stdscr.addstr(3, 0, "SPACE: click    1-3: buy    s: save    l: load    q: quit")
+			stdscr.addstr(3, 0, "SPACE: click    1-5: buy building    4-6: buy upgrade    s: save    l: load    q: quit")
 			for i, u in enumerate(upgrades, start=1):
 				stdscr.addstr(4 + i, 0, f"{i}. {u.name} | Owned: {u.amount} | Price: {u.price}")
+			base_line = 6 + len(upgrades)
+			stdscr.addstr(base_line, 0, "Upgrades:")
+			for j, ui in enumerate(upgrade_items, start=1):
+				stdscr.addstr(base_line + j, 0, f"{j+3}. {ui.name} | Owned: {ui.amount} | Price: {ui.price}")
 
 			stdscr.refresh()
 
@@ -305,18 +320,34 @@ def terminal_main():
 					click_value = base_click + sum(u.click_power * u.amount for u in upgrades)
 					cookies += click_value
 					total_cookies += click_value
-				elif c in (ord('1'), ord('2'), ord('3')):
+				elif c in (ord('1'), ord('2'), ord('3'), ord('4'), ord('5')):
 					idx = int(chr(c)) - 1
 					if 0 <= idx < len(upgrades):
 						up = upgrades[idx]
 						if cookies >= up.price:
 							cookies -= up.price
 							up.amount += 1
+				elif c in (ord('4'), ord('5'), ord('6')):
+					# purchase upgrade items 1-3 mapped to keys 4-6
+					mapping = {ord('4'): 0, ord('5'): 1, ord('6'): 2}
+					ui_idx = mapping.get(c)
+					if ui_idx is not None and 0 <= ui_idx < len(upgrade_items):
+						ui = upgrade_items[ui_idx]
+						if cookies >= ui.price:
+							cookies -= ui.price
+							ui.amount += 1
+							if ui.kind == "click_add":
+								base_click += ui.value
+							elif ui.kind == "global_cps_mult":
+								cps_multiplier *= ui.value
+							elif ui.kind == "building_cps_mult":
+								building_multipliers[ui.target] = building_multipliers.get(ui.target, 1.0) * ui.value
 				elif c in (ord('s'), ord('S')):
 					data = {
 						"cookies": cookies,
 						"total_cookies": total_cookies,
 						"upgrades": [{"name": u.name, "amount": u.amount} for u in upgrades],
+						"upgrade_items": [{"name": ui.name, "amount": ui.amount} for ui in upgrade_items],
 					}
 					try:
 						with open(SAVE_FILE, "w") as f:
@@ -333,6 +364,20 @@ def terminal_main():
 							up_map = {u["name"]: u for u in data.get("upgrades", [])}
 							for u in upgrades:
 								u.amount = up_map.get(u.name, {}).get("amount", 0)
+							uim_map = {u["name"]: u for u in data.get("upgrade_items", [])}
+							# reset effects
+							cps_multiplier = 1.0
+							building_multipliers = {}
+							base_click = 1
+							for ui in upgrade_items:
+								ui.amount = uim_map.get(ui.name, {}).get("amount", 0)
+								for _ in range(ui.amount):
+									if ui.kind == "click_add":
+										base_click += ui.value
+									elif ui.kind == "global_cps_mult":
+										cps_multiplier *= ui.value
+									elif ui.kind == "building_cps_mult":
+										building_multipliers[ui.target] = building_multipliers.get(ui.target, 1.0) * ui.value
 						except Exception:
 							pass
 
