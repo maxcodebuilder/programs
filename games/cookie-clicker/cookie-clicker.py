@@ -302,13 +302,13 @@ def terminal_main():
 			stdscr.erase()
 			stdscr.addstr(0, 0, "Cookie Clicker - Terminal")
 			stdscr.addstr(1, 0, f"Cookies: {int(cookies)}   CPS: {cps:.2f}")
-			stdscr.addstr(3, 0, "SPACE: click    1-5: buy building    4-6: buy upgrade    s: save    l: load    q: quit")
+			stdscr.addstr(3, 0, "SPACE: click    1-5: buy building    6-8: buy upgrade    s: save    l: load    q: quit")
 			for i, u in enumerate(upgrades, start=1):
 				stdscr.addstr(4 + i, 0, f"{i}. {u.name} | Owned: {u.amount} | Price: {u.price}")
 			base_line = 6 + len(upgrades)
 			stdscr.addstr(base_line, 0, "Upgrades:")
 			for j, ui in enumerate(upgrade_items, start=1):
-				stdscr.addstr(base_line + j, 0, f"{j+3}. {ui.name} | Owned: {ui.amount} | Price: {ui.price}")
+				stdscr.addstr(base_line + j, 0, f"{j+5}. {ui.name} | Owned: {ui.amount} | Price: {ui.price}")
 
 			stdscr.refresh()
 
@@ -327,9 +327,9 @@ def terminal_main():
 						if cookies >= up.price:
 							cookies -= up.price
 							up.amount += 1
-				elif c in (ord('4'), ord('5'), ord('6')):
-					# purchase upgrade items 1-3 mapped to keys 4-6
-					mapping = {ord('4'): 0, ord('5'): 1, ord('6'): 2}
+				elif c in (ord('6'), ord('7'), ord('8')):
+					# purchase upgrade items 1-3 mapped to keys 6-8
+					mapping = {ord('6'): 0, ord('7'): 1, ord('8'): 2}
 					ui_idx = mapping.get(c)
 					if ui_idx is not None and 0 <= ui_idx < len(upgrade_items):
 						ui = upgrade_items[ui_idx]
@@ -388,4 +388,3 @@ def terminal_main():
 
 if __name__ == "__main__":
 	main()
-
