@@ -1,0 +1,86 @@
+import sys
+import time
+import random
+
+# Open the Google Popcorn Doodle in the default browser
+def play_popcorn_doodle():
+    """Simple terminal popcorn mini-game: press SPACE quickly when kernels pop."""
+    duration = 25.0  # seconds of gameplay
+    reaction_window = 1.0  # seconds to press space after a pop
+    min_wait, max_wait = 0.4, 1.8  # random delay between pops
+
+    print("\nPopcorn! Try to catch popping kernels by pressing SPACE.")
+    print(f"You have {int(duration)} seconds. Press Ctrl+C to quit early.\n")
+    print("Get ready...")
+    time.sleep(1.0)
+
+    score = 0
+    popped = 0
+    start = time.time()
+    try:
+        while time.time() - start < duration:
+            wait = random.uniform(min_wait, max_wait)
+            time.sleep(wait)
+            # announce pop
+            popped += 1
+            sys.stdout.write("\rPOP! Press SPACE! " + " " * 20)
+            sys.stdout.flush()
+            key = _get_key_with_timeout(reaction_window)
+            if key is not None and key in (" ", "\x20"):
+                score += 1
+                sys.stdout.write("\rCaught! Score: {:3d}      ".format(score))
+            else:
+                sys.stdout.write("\rMissed! Score: {:3d}     ".format(score))
+            sys.stdout.flush()
+            time.sleep(0.6)
+            sys.stdout.write("\r" + " " * 50 + "\r")
+            sys.stdout.flush()
+    except KeyboardInterrupt:
+        print("\n\nGame interrupted.")
+    finally:
+        print("\nTime's up!")
+        print(f"Final score: {score} out of {popped} pops.\n")
+
+    # play again prompt
+    resp = input("Play again? (y/n): ").strip().lower()
+    if resp in ('y', 'yes'):
+        play_popcorn_doodle()
+    else:
+        print("Thanks for playing!")
+
+def _get_key_with_timeout(timeout):
+    """Return a single-character string if a key is pressed within timeout seconds, else None.
+    Cross-platform: msvcrt on Windows, termios+select on Unix."""
+    if sys.platform.startswith("win"):
+        try:
+            import msvcrt
+        except Exception:
+            return None
+        end = time.time() + timeout
+        while time.time() < end:
+            if msvcrt.kbhit():
+                ch = msvcrt.getwch()
+                return ch
+            time.sleep(0.01)
+        return None
+    else:
+        try:
+            import select
+            import tty
+            import termios
+        except Exception:
+            return None
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            tty.setraw(fd)
+            rlist, _, _ = select.select([fd], [], [], timeout)
+            if rlist:
+                ch = sys.stdin.read(1)
+                return ch
+            return None
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+
+if __name__ == "__main__":
+    play_popcorn_doodle()
