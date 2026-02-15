@@ -73,41 +73,10 @@ def clear_screen():
 def show_screen(state):
     """Display a summary screen showing choices and outcome.
 
-    If Tkinter is available, show a simple GUI window; otherwise fall back
-    to a fullscreen terminal 'screen' using curses if possible, else the
-    previous terminal summary.
+    If curses is available, show a fullscreen terminal 'screen'; otherwise
+    fall back to Tkinter if available, else the previous terminal summary.
     """
-    if TK_AVAILABLE:
-        # create a simple Tk window showing the summary
-        root = tk.Tk()
-        root.title("Adventure Summary")
-        # use a fixed-width label area
-        txt = tk.Text(root, wrap=tk.WORD, width=60, height=12)
-        txt.pack(padx=12, pady=12)
-        txt.insert(tk.END, f"Adventure Summary for {state.get('name','Traveler')}\n\n")
-        txt.insert(tk.END, f"Name: {state.get('name')}\n")
-        txt.insert(tk.END, f"Torch lit: {'Yes' if state.get('torch') else 'No'}\n")
-        txt.insert(tk.END, f"Approach: {state.get('approach')}\n")
-        txt.insert(tk.END, f"Chosen cave: {state.get('cave')}\n\n")
-        txt.insert(tk.END, "Outcome:\n")
-        txt.insert(tk.END, state.get('outcome', '(unknown)') + "\n")
-        txt.config(state=tk.DISABLED)
-
-        btn = tk.Button(root, text="Continue", command=root.destroy)
-        btn.pack(pady=(0, 12))
-
-        # center window on screen
-        root.update_idletasks()
-        w = root.winfo_width()
-        h = root.winfo_height()
-        ws = root.winfo_screenwidth()
-        hs = root.winfo_screenheight()
-        x = (ws // 2) - (w // 2)
-        y = (hs // 2) - (h // 2)
-        root.geometry(f"+{x}+{y}")
-
-        root.mainloop()
-    elif CURSES_AVAILABLE:
+    if CURSES_AVAILABLE:
         # curses-based full-screen summary
         def _curses_show(stdscr):
             try:
@@ -163,6 +132,36 @@ def show_screen(state):
             print(state.get('outcome', '(unknown)'))
             print("+" + "=" * 50 + "+")
             input("\nPress Enter to continue...")
+    elif TK_AVAILABLE:
+        # create a simple Tk window showing the summary
+        root = tk.Tk()
+        root.title("Adventure Summary")
+        # use a fixed-width label area
+        txt = tk.Text(root, wrap=tk.WORD, width=60, height=12)
+        txt.pack(padx=12, pady=12)
+        txt.insert(tk.END, f"Adventure Summary for {state.get('name','Traveler')}\n\n")
+        txt.insert(tk.END, f"Name: {state.get('name')}\n")
+        txt.insert(tk.END, f"Torch lit: {'Yes' if state.get('torch') else 'No'}\n")
+        txt.insert(tk.END, f"Approach: {state.get('approach')}\n")
+        txt.insert(tk.END, f"Chosen cave: {state.get('cave')}\n\n")
+        txt.insert(tk.END, "Outcome:\n")
+        txt.insert(tk.END, state.get('outcome', '(unknown)') + "\n")
+        txt.config(state=tk.DISABLED)
+
+        btn = tk.Button(root, text="Continue", command=root.destroy)
+        btn.pack(pady=(0, 12))
+
+        # center window on screen
+        root.update_idletasks()
+        w = root.winfo_width()
+        h = root.winfo_height()
+        ws = root.winfo_screenwidth()
+        hs = root.winfo_screenheight()
+        x = (ws // 2) - (w // 2)
+        y = (hs // 2) - (h // 2)
+        root.geometry(f"+{x}+{y}")
+
+        root.mainloop()
     else:
         # ...existing terminal fallback...
         clear_screen()
