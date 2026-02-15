@@ -128,6 +128,112 @@ class Popcorn:
         surf.blit(rotated, (int(self.x - rotated.get_width() / 2), int(self.y - rotated.get_height() / 2)))
 
 
+class Bullet:
+    def __init__(self, x, y, vx, vy, owner=None, btype="normal"):
+        self.x = x
+        self.y = y
+        self.vx = vx
+        self.vy = vy
+        self.owner = owner
+        self.type = btype
+        self.radius = 6 if btype == "normal" else 8
+
+    def update(self, dt):
+        # simple homing handled externally for magnet bullets
+        self.x += self.vx * dt * 60
+        self.y += self.vy * dt * 60
+
+    def draw(self, surf):
+        col = (200, 200, 255) if self.type == "magnet" else (220, 180, 60)
+        pygame.draw.circle(surf, col, (int(self.x), int(self.y)), self.radius)
+
+
+class Player:
+    def __init__(self, x, y, name="P", skin="shield", is_human=False):
+        self.x = x
+        self.y = y
+        self.name = name
+        self.skin = skin
+        self.hearts = 2
+        self.is_human = is_human
+        self.shielded = False
+        self.catch_stored = None
+        self.heal_cool = 0.0
+
+    def draw(self, surf, font):
+        cols = {"shield": (120, 200, 255), "heal": (160, 255, 160), "catch": (255, 200, 120)}
+        c = cols.get(self.skin, (200, 200, 200))
+        pygame.draw.circle(surf, c, (int(self.x), int(self.y)), 16)
+        # draw hearts
+        for i in range(self.hearts):
+            pygame.draw.circle(surf, (255, 40, 40), (int(self.x - 12 + i * 14), int(self.y - 28)), 6)
+        # shield indicator
+        if self.shielded:
+            pygame.draw.circle(surf, (180, 220, 255), (int(self.x), int(self.y)), 20, 2)
+        # name
+        nm = font.render(self.name, True, (240, 240, 240))
+        surf.blit(nm, (self.x - nm.get_width() / 2, self.y + 20))
+
+    def damage(self):
+        if self.shielded:
+            self.shielded = False
+            return False
+        self.hearts -= 1
+        return True
+
+
+class Boss:
+    def __init__(self, btype, x, y):
+        self.type = btype
+        self.x = x
+        self.y = y
+        self.cool = 0.0
+        self.fire_rate = 1.6
+        if btype == "fire":
+            self.fire_rate = 0.9
+        if btype == "magnet":
+            self.fire_rate = 1.4
+
+    def update(self, dt):
+        self.cool -= dt
+
+    def try_shoot(self, targets, bullets):
+        if self.cool > 0:
+            return
+        self.cool = self.fire_rate + random.uniform(-0.4, 0.4)
+        # pick a target
+        if not targets:
+            return
+        tgt = random.choice(targets)
+        dx = tgt.x - self.x
+        dy = tgt.y - self.y
+        dist = math.hypot(dx, dy) + 0.001
+        speed = 6.0
+        btype = "normal"
+        if self.type == "magnet":
+            # magnet bullets home: give them a tag
+            vx = dx / dist * speed
+            vy = dy / dist * speed
+            btype = "magnet"
+        elif self.type == "butter":
+            vx = dx / dist * (speed * 0.7)
+            vy = dy / dist * (speed * 0.7)
+        elif self.type == "salt":
+            vx = dx / dist * (speed * 1.0)
+            vy = dy / dist * (speed * 1.0)
+        elif self.type == "fire":
+            vx = dx / dist * (speed * 1.4)
+            vy = dy / dist * (speed * 1.4)
+        bullets.append(Bullet(self.x, self.y, vx, vy, owner=self, btype=btype))
+
+    def draw(self, surf, font):
+        cols = {"butter": (255, 220, 120), "salt": (240, 240, 240), "fire": (255, 120, 80), "magnet": (180, 180, 255)}
+        c = cols.get(self.type, (200, 200, 200))
+        pygame.draw.rect(surf, c, (int(self.x - 24), int(self.y - 18), 48, 36))
+        nm = font.render(self.type, True, (10, 10, 10))
+        surf.blit(nm, (self.x - nm.get_width() / 2, self.y - 8))
+
+
 def run_game():
     pygame.init()
     try:
@@ -179,6 +285,25 @@ def run_game():
         sizzle_channel = None
 
     running = True
+    # gameplay entities
+    bullets = []
+    players = []
+    bosses = []
+
+    # create 4 players around the pan; player 0 is human
+    for i in range(4):
+        angle = -0.5 + i * 0.4
+        px = pan_center[0] + math.cos(angle) * (pan_radius + 40)
+        py = pan_center[1] + math.sin(angle) * (pan_radius + 40)
+        skin = ["shield", "heal", "catch"][i % 3]
+        players.append(Player(px, py, name=f"P{i+1}", skin=skin, is_human=(i == 0)))
+
+    # create bosses sequence
+    boss_types = ["butter", "salt", "fire", "magnet"]
+    for i, bt in enumerate(boss_types):
+        bx = 80 + i * 120
+        by = 60
+        bosses.append(Boss(bt, bx, by))
     while running:
         dt = clock.tick(60) / 1000.0
         elapsed = time.time() - start_time
@@ -190,6 +315,58 @@ def run_game():
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
                     heating = True
+                # player controls (human is players[0])
+                if players:
+                    human = players[0]
+                    if event.key == pygame.K_LEFT:
+                        human.x -= 8
+                    elif event.key == pygame.K_RIGHT:
+                        human.x += 8
+                    elif event.key == pygame.K_UP:
+                        human.y -= 6
+                    elif event.key == pygame.K_DOWN:
+                        human.y += 6
+                    elif event.key == pygame.K_k:
+                        # cycle skin
+                        skins = ["shield", "heal", "catch"]
+                        idx = skins.index(human.skin) if human.skin in skins else 0
+                        human.skin = skins[(idx + 1) % len(skins)]
+                    elif event.key == pygame.K_a:
+                        # activate skin
+                        if human.skin == "shield":
+                            human.shielded = True
+                        elif human.skin == "heal" and human.heal_cool <= 0:
+                            human.hearts = min(2, human.hearts + 1)
+                            human.heal_cool = 5.0
+                    elif event.key == pygame.K_c:
+                        # catch nearest bullet if catch skin
+                        if human.skin == "catch" and human.catch_stored is None:
+                            nearest = None
+                            nd = 9999
+                            for b in bullets:
+                                d = (b.x - human.x) ** 2 + (b.y - human.y) ** 2
+                                if d < nd and d < (40 ** 2):
+                                    nd = d
+                                    nearest = b
+                            if nearest:
+                                human.catch_stored = (nearest.type,)
+                                try:
+                                    bullets.remove(nearest)
+                                except Exception:
+                                    pass
+                    elif event.key == pygame.K_t:
+                        # throw stored bullet toward nearest boss
+                        if human.catch_stored and bosses:
+                            bt = human.catch_stored[0]
+                            target = min(bosses, key=lambda bb: (bb.x - human.x) ** 2 + (bb.y - human.y) ** 2)
+                            dx = target.x - human.x
+                            dy = target.y - human.y
+                            d = math.hypot(dx, dy) + 0.001
+                            speed = 8.0
+                            vx = dx / d * speed
+                            vy = dy / d * speed
+                            bullets.append(Bullet(human.x, human.y, vx, vy, owner=human, btype=bt))
+                            human.catch_stored = None
                 if event.key == pygame.K_p:
                     # pop nearest kernel to pan center
                     if kernels:
@@ -324,6 +501,65 @@ def run_game():
 
         for p in popcorns:
             p.draw(screen)
+
+        # update and draw bullets
+        for b in bullets[:]:
+            # magnet bullets home slightly towards nearest player
+            if b.type == "magnet":
+                if players:
+                    tgt = min(players, key=lambda pl: (pl.x - b.x) ** 2 + (pl.y - b.y) ** 2)
+                    dx = tgt.x - b.x
+                    dy = tgt.y - b.y
+                    d = math.hypot(dx, dy) + 0.001
+                    homing = 0.12
+                    b.vx = (1 - homing) * b.vx + homing * (dx / d * 6.0)
+                    b.vy = (1 - homing) * b.vy + homing * (dy / d * 6.0)
+            b.update(dt)
+            b.draw(screen)
+            # remove off-screen bullets
+            if b.x < -50 or b.x > WIDTH + 50 or b.y < -50 or b.y > HEIGHT + 50:
+                bullets.remove(b)
+
+        # players: simple AI and draw
+        for pl in players:
+            if not pl.is_human:
+                # basic AI: move slowly around
+                pl.x += random.uniform(-0.3, 0.3)
+                pl.y += random.uniform(-0.2, 0.2)
+                # occasionally use shield or heal
+                if pl.skin == "shield" and random.random() < 0.001:
+                    pl.shielded = True
+                if pl.skin == "heal" and pl.hearts < 2 and pl.heal_cool <= 0 and random.random() < 0.002:
+                    pl.hearts = min(2, pl.hearts + 1)
+                    pl.heal_cool = 5.0
+            # draw every player
+            pl.draw(screen, FONT)
+            # decrement heal cooldown for all players
+            pl.heal_cool = max(0.0, pl.heal_cool - dt)
+
+        # bosses act and draw
+        for bs in bosses:
+            bs.update(dt)
+            bs.try_shoot([p for p in players if p.hearts > 0], bullets)
+            bs.draw(screen, FONT)
+
+        # bullet-player collisions
+        for b in bullets[:]:
+            for pl in players:
+                if pl.hearts <= 0:
+                    continue
+                if (b.x - pl.x) ** 2 + (b.y - pl.y) ** 2 <= (b.radius + 12) ** 2:
+                    # apply damage
+                    bullets.remove(b)
+                    hit = pl.damage()
+                    # heal-skin effect: if heal skin, sometimes gain back
+                    if pl.skin == "heal" and random.random() < 0.3:
+                        pl.hearts = min(2, pl.hearts + 1)
+                    break
+
+        # draw player 0 controls hint
+        hint = FONT.render("Arrows: move, C: catch (skin), T: throw, K: change skin", True, (200,200,200))
+        screen.blit(hint, (10, HEIGHT - 28))
 
         # draw heat meter
         meter_w = 200
