@@ -1,0 +1,259 @@
+import random
+import time
+import os
+try:
+    import tkinter as tk
+    TK_AVAILABLE = True
+except Exception:
+    TK_AVAILABLE = False
+
+# Add curses detection
+try:
+    import curses
+    CURSES_AVAILABLE = True
+except Exception:
+    CURSES_AVAILABLE = False
+
+def displayIntro():
+    print('''You are in a land full of dragons. Mountains loom in the distance
+and the wind carries the smell of smoke. In front of you lie two caves.
+
+Each cave yawns like a dark mouth. Legends tell that one of the dragons
+who lives here is old and kind; he hoards treasure but will share it
+with travelers who show respect. The other dragon is young and ravenous,
+quick to anger and hungry for anything that moves.
+
+You take a breath. The choice is yours.
+''')
+
+def chooseCave():
+    cave = ''
+    print("Two caves stand before you:")
+    print("""
+        ___                 ___
+       /   \               /   \\
+      /     \   (1)   _   /     \\
+     |  _  |             |  _  |
+     | | | |             | | | |
+    """)
+    while cave not in ('1', '2'):
+        cave = input("Which cave will you go into? (1 or 2): ").strip()
+    return cave
+
+
+def gatherChoices():
+    """Ask a few extra questions and return a state dict."""
+    state = {}
+    name = input("What is your name, traveler? ").strip()
+    if not name:
+        name = "Traveler"
+    state['name'] = name
+
+    torch = input("Do you light a torch before entering? (yes/no): ").strip().lower()
+    state['torch'] = torch in ('yes', 'y')
+
+    approach = ''
+    while approach not in ('1', '2'):
+        print("How will you approach the cave?")
+        print("1) Cautiously, step by step")
+        print("2) Boldly, charge right in")
+        approach = input("Choose 1 or 2: ").strip()
+    state['approach'] = 'cautious' if approach == '1' else 'bold'
+    return state
+
+
+def clear_screen():
+    # cross-platform terminal clear
+    try:
+        os.system('cls' if os.name == 'nt' else 'clear')
+    except Exception:
+        print('\n' * 3)
+
+
+def show_screen(state):
+    """Display a summary screen showing choices and outcome.
+
+    If Tkinter is available, show a simple GUI window; otherwise fall back
+    to a fullscreen terminal 'screen' using curses if possible, else the
+    previous terminal summary.
+    """
+    if TK_AVAILABLE:
+        # create a simple Tk window showing the summary
+        root = tk.Tk()
+        root.title("Adventure Summary")
+        # use a fixed-width label area
+        txt = tk.Text(root, wrap=tk.WORD, width=60, height=12)
+        txt.pack(padx=12, pady=12)
+        txt.insert(tk.END, f"Adventure Summary for {state.get('name','Traveler')}\n\n")
+        txt.insert(tk.END, f"Name: {state.get('name')}\n")
+        txt.insert(tk.END, f"Torch lit: {'Yes' if state.get('torch') else 'No'}\n")
+        txt.insert(tk.END, f"Approach: {state.get('approach')}\n")
+        txt.insert(tk.END, f"Chosen cave: {state.get('cave')}\n\n")
+        txt.insert(tk.END, "Outcome:\n")
+        txt.insert(tk.END, state.get('outcome', '(unknown)') + "\n")
+        txt.config(state=tk.DISABLED)
+
+        btn = tk.Button(root, text="Continue", command=root.destroy)
+        btn.pack(pady=(0, 12))
+
+        # center window on screen
+        root.update_idletasks()
+        w = root.winfo_width()
+        h = root.winfo_height()
+        ws = root.winfo_screenwidth()
+        hs = root.winfo_screenheight()
+        x = (ws // 2) - (w // 2)
+        y = (hs // 2) - (h // 2)
+        root.geometry(f"+{x}+{y}")
+
+        root.mainloop()
+    elif CURSES_AVAILABLE:
+        # curses-based full-screen summary
+        def _curses_show(stdscr):
+            try:
+                curses.curs_set(0)
+            except Exception:
+                pass
+            stdscr.clear()
+            h, w = stdscr.getmaxyx()
+            lines = []
+            lines.append(f"Adventure Summary for {state.get('name','Traveler')}")
+            lines.append("")
+            lines.append(f"Name: {state.get('name')}")
+            lines.append(f"Torch lit: {'Yes' if state.get('torch') else 'No'}")
+            lines.append(f"Approach: {state.get('approach')}")
+            lines.append(f"Chosen cave: {state.get('cave')}")
+            lines.append("")
+            lines.append("Outcome:")
+            lines.append(state.get('outcome', '(unknown)'))
+            # center vertically
+            start_y = max(0, (h // 2) - (len(lines) // 2) - 1)
+            for i, line in enumerate(lines):
+                # trim lines that are too long for the screen
+                if len(line) > w - 2:
+                    line = line[:w-5] + "..."
+                x = max(0, (w - len(line)) // 2)
+                try:
+                    stdscr.addstr(start_y + i, x, line)
+                except Exception:
+                    pass
+            hint = "Press any key to continue..."
+            try:
+                stdscr.addstr(min(h-1, start_y + len(lines) + 2), max(0, (w - len(hint)) // 2), hint, curses.A_DIM)
+            except Exception:
+                pass
+            stdscr.refresh()
+            stdscr.getch()
+
+        try:
+            curses.wrapper(_curses_show)
+        except Exception:
+            # last-resort fallback to terminal print
+            clear_screen()
+            print("+" + "=" * 50 + "+")
+            title = f" Adventure Summary for {state.get('name','Traveler')} "
+            print("|" + title.center(50) + "|")
+            print("+" + "=" * 50 + "+")
+            print(f"Name: {state.get('name')}")
+            print(f"Torch lit: {'Yes' if state.get('torch') else 'No'}")
+            print(f"Approach: {state.get('approach')}")
+            print(f"Chosen cave: {state.get('cave')}")
+            print("")
+            print("Outcome:")
+            print(state.get('outcome', '(unknown)'))
+            print("+" + "=" * 50 + "+")
+            input("\nPress Enter to continue...")
+    else:
+        # ...existing terminal fallback...
+        clear_screen()
+        print("+" + "=" * 50 + "+")
+        title = f" Adventure Summary for {state.get('name','Traveler')} "
+        print("|" + title.center(50) + "|")
+        print("+" + "=" * 50 + "+")
+        print(f"Name: {state.get('name')}")
+        print(f"Torch lit: {'Yes' if state.get('torch') else 'No'}")
+        print(f"Approach: {state.get('approach')}")
+        print(f"Chosen cave: {state.get('cave')}")
+        print("")
+        print("Outcome:")
+        print(state.get('outcome', '(unknown)'))
+        print("+" + "=" * 50 + "+")
+        input("\nPress Enter to continue...")
+
+
+def checkCave(chosenCave, state=None):
+    if state is None:
+        state = {}
+    print('You step forward. The ground crunches beneath your boots.')
+    time.sleep(1.5)
+    print('A cold breath wafts from the cave mouth. Something heavy shifts inside.')
+    time.sleep(1.4)
+    print('The cave grows silent, then a deep, rumbling sound approaches...')
+    time.sleep(1.6)
+
+    friendlyCave = random.randint(1, 2)
+
+    # dramatic reveal of dragon's action
+    # modify narrative slightly based on torch/approach choices
+    if state.get('torch'):
+        print('\nYour torchlight spills into the cave, revealing ancient markings on the walls.')
+        time.sleep(1.1)
+    if state.get('approach') == 'cautious':
+        print('You move slowly, listening for the slightest sound.')
+        time.sleep(1.0)
+    else:
+        print('You stomp forward, making your presence known.')
+        time.sleep(1.0)
+
+    if chosenCave == str(friendlyCave):
+        print()
+        print("A great eye opens. The dragon regards you for a long moment, then it exhales a gentle plume of smoke and lowers its head.")
+        time.sleep(1.6)
+        print("It nudges aside a pile of glittering coins and jewels and places an old, ornate chest at your feet.")
+        time.sleep(1.4)
+        print("Inside you find gold, a shining crown, and a tattered map that promises more adventure beyond the mountains.")
+        time.sleep(1.2)
+        outcome = "The dragon rumbles softly — you have been lucky today."
+        print("\n" + outcome)
+    else:
+        print()
+        print("The dragon's nostrils flare. It snaps its teeth and the cave erupts with a thunderous roar.")
+        time.sleep(1.6)
+        if state.get('torch') and state.get('approach') == 'cautious':
+            # slight escape chance described
+            print("Your torch startles the beast just long enough for you to tumble out of the cave and flee.")
+            time.sleep(1.2)
+            outcome = "You barely escape; the dragon devours what remained inside."
+            print(outcome)
+        else:
+            print("With blinding speed the dragon lunges forward, teeth bared and flames licking at the entrance.")
+            time.sleep(1.2)
+            outcome = "You stumble back and barely escape with your life — the beast devours whatever the cave had held."
+            print(outcome)
+
+    # record state for the summary screen
+    state['cave'] = chosenCave
+    state['outcome'] = outcome
+    return state
+
+
+def askPlayAgain():
+    resp = input("Do you want to play again? (yes or no): ").strip().lower()
+    while resp not in ('yes', 'y', 'no', 'n'):
+        resp = input("Please answer 'yes' or 'no': ").strip().lower()
+    return resp in ('yes', 'y')
+
+
+def main():
+    playAgain = True
+    while playAgain:
+        displayIntro()
+        state = gatherChoices()
+        caveNumber = chooseCave()
+        state = checkCave(caveNumber, state)
+        show_screen(state)
+        playAgain = askPlayAgain()
+
+
+if __name__ == '__main__':
+    main()

@@ -21,11 +21,25 @@ OBSTACLE_WIDTH = 30
 # gameplay: how many jumps allowed before touching ground (2 = double-jump)
 MAX_JUMPS = 2
 # difficulty multiplier: >1 makes curve steeper (harder earlier), <1 makes it shallower
-DIFFICULTY = 1.0
+# Default set lower to make levels a lot easier
+DIFFICULTY = 0.4
 MIN_DIFFICULTY = 0.3
 MAX_DIFFICULTY = 3.0
 DIFF_STEP = 0.1
 DIFF_MSG_DURATION = 1.6
+
+# Level easing constants to make gaps larger and clusters rarer
+GAP_EASE = 1.6
+CLUSTER_BASE = 0.04
+CLUSTER_SCALE = 0.3
+
+# Speed tuning: lower base and gentler growth makes early sections easier
+SPEED_BASE = 220.0
+SPEED_GROWTH_SCALE = 1.5
+
+# Player physics tuning for easier jumps
+JUMP_VELOCITY = -15.0
+GRAVITY = 30.0
 
 SAVE_FILE = os.path.join(os.path.dirname(__file__), "geometry_save.json")
 
@@ -57,13 +71,13 @@ class Player:
         # allow jump if on ground or have jumps remaining (double-jump)
         if self.jumps_left > 0:
             # Geometry Dash feels snappy: a strong instant impulse
-            self.vy = -13.5
+            self.vy = JUMP_VELOCITY
             self.on_ground = False
             self.jumps_left -= 1
 
     def update(self, dt):
         # gravity
-        self.vy += 35.0 * dt
+        self.vy += GRAVITY * dt
         self.y += self.vy
         if self.y >= GROUND_Y - self.h:
             self.y = GROUND_Y - self.h
@@ -106,20 +120,23 @@ class Level:
             # gaps shrink as t increases (start easier -> larger gaps)
             min_gap = max(120, int(320 - 160 * t_adj))
             max_gap = max(180, int(520 - 340 * t_adj))
-            gap = rng.randint(min_gap, max_gap)
+            # apply easing multiplier so gaps are significantly larger for easier play
+            gap_raw = rng.randint(min_gap, max_gap)
+            gap = int(gap_raw * GAP_EASE)
 
-            # cluster chance increases with adjusted t
-            cluster_chance = 0.08 + 0.5 * t_adj
+            # cluster chance increases with adjusted t but overall reduced for easier play
+            cluster_chance = CLUSTER_BASE + CLUSTER_SCALE * t_adj
             if rng.random() < cluster_chance:
                 # cluster of spikes/blocks; early clusters are smaller
-                cluster_count = rng.randint(1, 2 + int(2 * t_adj))
+                cluster_count = rng.randint(1, 1 + int(1 * t_adj))
                 for i in range(cluster_count):
-                    h = rng.randint(24, 60 + int(40 * t_adj))
+                    # obstacle height growth reduced to make jumps easier
+                    h = rng.randint(24, 48 + int(20 * t_adj))
                     self.objects.append((x + i * (OBSTACLE_WIDTH + 8), 'block', OBSTACLE_WIDTH, h))
                 x += gap
             else:
-                # single block, height grows slightly with t_adj
-                h = rng.randint(24, 60 + int(40 * t_adj))
+                # single block, height grows slightly with t_adj but capped lower
+                h = rng.randint(24, 48 + int(20 * t_adj))
                 self.objects.append((x, 'block', OBSTACLE_WIDTH, h))
                 x += gap
 
@@ -191,8 +208,8 @@ def main():
     diff_msg_time = 0.0
 
     scroll = 0.0
-    # start a bit slower so early sections feel easier
-    speed = 260.0  # horizontal scroll speed (px/s)
+    # tuned base speed and growth for easier gameplay
+    speed = SPEED_BASE  # horizontal scroll speed (px/s)
     running = True
     game_over = False
     start_time = time.time()
@@ -255,7 +272,8 @@ def main():
                     # visual feedback
                     diff_msg = f"Difficulty: {difficulty_label(DIFF)} ({DIFF:.1f})"
                     diff_msg_time = time.time()
-                elif event.key == pygame.K_RIGHTBRACKET:
+                elif event.key in (pygame.K_RIGHTBRACKET, pygame.K_SLASH):
+                    # allow '/' as an alternative key to increase difficulty
                     DIFF = min(MAX_DIFFICULTY, DIFFICULTY + DIFF_STEP)
                     globals()['DIFFICULTY'] = DIFF
                     level = Level(seed=LEVEL_SEEDS[level_index])
@@ -290,8 +308,8 @@ def main():
 
             # update score
             score = (time.time() - start_time) * 10.0  # scale to make score increase faster
-            # gradually increase speed more strongly as you progress; scale with DIFFICULTY
-            speed = 260.0 + score * (3.0 * DIFFICULTY)
+            # gradually increase speed, but more gently to keep levels easier
+            speed = SPEED_BASE + score * (SPEED_GROWTH_SCALE * DIFFICULTY)
 
         # draw
         screen.fill((30, 30, 30))
