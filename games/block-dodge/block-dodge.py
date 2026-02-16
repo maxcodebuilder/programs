@@ -18,7 +18,7 @@ YELLOW = (255, 255, 0)
 
 # Setup Screen
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Popcorn Doodle Clone")
+pygame.display.set_caption("Block Dodge")
 clock = pygame.time.Clock()
 
 # Player Setup
