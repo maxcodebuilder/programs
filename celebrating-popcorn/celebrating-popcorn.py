@@ -13,26 +13,26 @@ small_font = pygame.font.Font(None, 36)
 LEVELS = {
     1: {
         'name': 'BUTTER',
-        'spawn_chance': 0.02,
+        'spawn_chance': 0.05,
         'projectile_speed': 2,
         'color': (255, 200, 100),
-        'time_limit': 30,
+        'time_limit': 60,
         'boss_hp': 1000,
         'damage_range': (1, 3)
     },
     2: {
         'name': 'SALT SHAKER',
-        'spawn_chance': 0.05,
-        'projectile_speed': 4,
+        'spawn_chance': 0.10,
+        'projectile_speed': 2,
         'color': (200, 200, 200),
-        'time_limit': 45,
+        'time_limit': 60,
         'boss_hp': 5000,
         'damage_range': (4, 6)
     },
     3: {
         'name': 'FIRE',
-        'spawn_chance': 0.08,
-        'projectile_speed': 6,
+        'spawn_chance': 0.50,
+        'projectile_speed': 2,
         'color': (255, 100, 0),
         'time_limit': 60,
         'boss_hp': 10000,
@@ -41,10 +41,10 @@ LEVELS = {
     },
     4: {
         'name': 'MAGNETRON',
-        'spawn_chance': 0.12,
-        'projectile_speed': 8,
+        'spawn_chance': 1.00,
+        'projectile_speed': 2,
         'color': (255, 0, 100),
-        'time_limit': 75,
+        'time_limit': 60,
         'boss_hp': 15000,
         'damage_range': (10, 15),
         'heal_range': (16, 30)
@@ -85,6 +85,9 @@ boss_shoot_timer = 0  # Timer for boss shooting bullets
 # Player beam when attacking
 player_beam = None
 player_beam_timer = 0
+# Eating mechanic cooldown
+eat_cooldown = 15  # frames between eats
+eat_timer = 0
 
 def spawn_projectile():
     side = random.choice(['top', 'bottom', 'left', 'right'])
@@ -248,16 +251,7 @@ while running:
                 in_self_destruct = False
                 last_attack_time = 0
                 player_attack = None
-            elif event.key == pygame.K_SPACE:
-                # Eat a nearby projectile to gain 0.5 HP
-                eaten = False
-                for p in projectiles[:]:
-                    dist = ((p[0]-player_pos[0])**2 + (p[1]-player_pos[1])**2)**0.5
-                    if dist <= player_radius + 12:
-                        projectiles.remove(p)
-                        lives = min(MAX_HP, lives + 0.5)
-                        eaten = True
-                        break
+            # space eating is handled per-frame to be more responsive
             # Attack selection during boss fight
             elif in_self_destruct and last_attack_time <= 0:
                 if current_level == 1:  # BUTTER
@@ -420,6 +414,19 @@ while running:
     # Keep player in bounds
     player_pos[0] = max(player_radius, min(800 - player_radius, player_pos[0]))
     player_pos[1] = max(player_radius, min(600 - player_radius, player_pos[1]))
+
+    # Eating mechanic (hold SPACE to eat nearby projectile)
+    if eat_timer <= 0 and lives > 0:
+        if keys[pygame.K_SPACE]:
+            for p in projectiles[:]:
+                dist = ((p[0]-player_pos[0])**2 + (p[1]-player_pos[1])**2)**0.5
+                if dist <= player_radius + 12:
+                    projectiles.remove(p)
+                    lives = min(MAX_HP, lives + 0.5)
+                    eat_timer = eat_cooldown
+                    break
+    if eat_timer > 0:
+        eat_timer -= 1
 
     # 2. Projectile Logic (normal or self-destruct)
     if not in_self_destruct:
