@@ -56,7 +56,8 @@ current_level = 1
 level_data = LEVELS[current_level]
 level_start_time = pygame.time.get_ticks()
 level_survived = 0
-lives = 2
+lives = 2.0
+MAX_HP = 2.0
 in_self_destruct = False
 self_destruct_start_time = 0
 boss_health = 0
@@ -230,13 +231,13 @@ while running:
         if event.type == pygame.QUIT:
             running = False
         elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_SPACE and lives == 0:
+            if event.key == pygame.K_SPACE and lives <= 0:
                 # Restart the game
                 current_level = 1
                 level_data = LEVELS[current_level]
                 level_start_time = pygame.time.get_ticks()
                 is_popped = False
-                lives = 2
+                lives = MAX_HP
                 projectiles = []
                 lasers = []
                 mini_fires = []
@@ -247,6 +248,16 @@ while running:
                 in_self_destruct = False
                 last_attack_time = 0
                 player_attack = None
+            elif event.key == pygame.K_SPACE:
+                # Eat a nearby projectile to gain 0.5 HP
+                eaten = False
+                for p in projectiles[:]:
+                    dist = ((p[0]-player_pos[0])**2 + (p[1]-player_pos[1])**2)**0.5
+                    if dist <= player_radius + 12:
+                        projectiles.remove(p)
+                        lives = min(MAX_HP, lives + 0.5)
+                        eaten = True
+                        break
             # Attack selection during boss fight
             elif in_self_destruct and last_attack_time <= 0:
                 if current_level == 1:  # BUTTER
@@ -347,15 +358,8 @@ while running:
             else:  # MAGNETRON - 1 second
                 shoot_interval = 60
             
-            # Bullet speed increases with level (2x slower)
-            if current_level == 1:
-                speed = 2.5
-            elif current_level == 2:
-                speed = 3.25
-            elif current_level == 3:
-                speed = 4
-            else:
-                speed = 4.75
+            # Use Butter (level 1) bullet speed for all levels
+            speed = 2.5
             
             angle = random.uniform(0, 2 * math.pi)
             projectiles.append([boss_pos[0], boss_pos[1], speed * math.cos(angle), speed * math.sin(angle)])
@@ -439,7 +443,7 @@ while running:
             # Normal level - projectiles hit player
             dist = ((p[0]-player_pos[0])**2 + (p[1]-player_pos[1])**2)**0.5
             if dist < player_radius + 10:
-                lives -= 1
+                lives -= 1.0
                 is_popped = True
                 if lives > 0:
                     is_popped = False
@@ -475,7 +479,7 @@ while running:
                 closest_y = laser_start_y + t * dy
                 dist = ((px - closest_x)**2 + (py - closest_y)**2)**0.5
                 if dist < player_radius + 5:
-                    lives -= 1
+                    lives -= 1.0
                     is_popped = True
                     if lives > 0:
                         is_popped = False
@@ -496,7 +500,7 @@ while running:
         if not in_self_destruct:
             dist = ((mf[0] - player_pos[0])**2 + (mf[1] - player_pos[1])**2)**0.5
             if dist < player_radius + 8:
-                lives -= 1
+                lives -= 1.0
                 is_popped = True
                 if lives > 0:
                     is_popped = False
@@ -592,7 +596,7 @@ while running:
         screen.blit(level_text, (200, 20))
     
     # Draw lives
-    lives_text = small_font.render(f"Lives: {lives}", True, (50, 50, 50))
+    lives_text = small_font.render(f"HP: {lives:.1f}", True, (50, 50, 50))
     screen.blit(lives_text, (600, 20))
 
     if lives == 0:
