@@ -14,27 +14,27 @@ LEVELS = {
     1: {
         'name': 'BUTTER',
         'spawn_chance': 0.05,
-        'projectile_speed': 2,
+        'projectile_speed': 1,
         'color': (255, 200, 100),
-        'time_limit': 60,
+        'time_limit': 30,
         'boss_hp': 1000,
         'damage_range': (1, 3)
     },
     2: {
         'name': 'SALT SHAKER',
         'spawn_chance': 0.10,
-        'projectile_speed': 2,
+        'projectile_speed': 1,
         'color': (200, 200, 200),
-        'time_limit': 60,
+        'time_limit': 30,
         'boss_hp': 5000,
         'damage_range': (4, 6)
     },
     3: {
         'name': 'FIRE',
         'spawn_chance': 0.50,
-        'projectile_speed': 2,
+        'projectile_speed': 1,
         'color': (255, 100, 0),
-        'time_limit': 60,
+        'time_limit': 30,
         'boss_hp': 10000,
         'damage_range': (7, 9),
         'heal_range': (10, 15)
@@ -42,9 +42,9 @@ LEVELS = {
     4: {
         'name': 'MAGNETRON',
         'spawn_chance': 1.00,
-        'projectile_speed': 2,
+        'projectile_speed': 1,
         'color': (255, 0, 100),
-        'time_limit': 60,
+        'time_limit': 30,
         'boss_hp': 15000,
         'damage_range': (10, 15),
         'heal_range': (16, 30)
