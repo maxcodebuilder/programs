@@ -1,4 +1,3 @@
-import pygame
 import json
 import os
 # Avoid importing tkinter on macOS builds where the bundled Tcl/Tk aborts
