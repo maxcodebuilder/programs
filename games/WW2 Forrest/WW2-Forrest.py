@@ -22,9 +22,9 @@ BIGFONT = pygame.font.SysFont(None, 40)
 
 # Enemy definitions (health, xp, gold)
 ENEMY_TYPES = {
-	'soldier': {'hp':100, 'xp':10, 'gold':100, 'color':(200,50,50), 'damage':10},
-	'general': {'hp':1000, 'xp':30, 'gold':500, 'color':(50,50,200), 'damage':40},
-	'mercenary': {'hp':3000, 'xp':500, 'gold':1500, 'color':(50,200,50), 'damage':80},
+	'soldier': {'hp':100, 'xp':10, 'gold':100, 'color':(200,50,50), 'damage':0.1},
+	'general': {'hp':1000, 'xp':30, 'gold':500, 'color':(50,50,200), 'damage':0.5},
+	'mercenary': {'hp':3000, 'xp':500, 'gold':1500, 'color':(50,200,50), 'damage':1.0},
 }
 
 # Weapons: name, cost, base_damage, unlock_level
@@ -110,17 +110,25 @@ class Enemy(pygame.sprite.Sprite):
 	def rect(self):
 		return pygame.Rect(self.x-self.radius, self.y-self.radius, self.radius*2, self.radius*2)
 
-	def update(self, dt, player):
-		# move towards player
-		dx = player.x - self.x
-		dy = player.y - self.y
+	def update(self, dt, castle):
+		# move towards castle
+		dx = castle['x'] - self.x
+		dy = castle['y'] - self.y
 		dist = math.hypot(dx,dy) + 1e-6
 		speed = 40 if self.type=='soldier' else (25 if self.type=='general' else 15)
 		self.x += dx/dist * speed * dt
 		self.y += dy/dist * speed * dt
 
 	def draw(self, surf):
-		pygame.draw.circle(surf, self.color, (int(self.x), int(self.y)), self.radius)
+		# draw humanoid enemy: head and body
+		head_r = max(5, self.radius//2)
+		head_x = int(self.x)
+		head_y = int(self.y - self.radius//1.5)
+		body_w = int(self.radius * 1.2)
+		body_h = int(self.radius * 1.3)
+		body_rect = pygame.Rect(int(self.x - body_w/2), int(self.y - body_h/2), body_w, body_h)
+		pygame.draw.rect(surf, self.color, body_rect)
+		pygame.draw.circle(surf, (220,200,170), (head_x, head_y), head_r)
 		# hp bar
 		bar_w = self.radius*2
 		hp_ratio = max(0, self.hp/self.max_hp)
@@ -128,7 +136,124 @@ class Enemy(pygame.sprite.Sprite):
 		pygame.draw.rect(surf, (0,200,0), (self.x-self.radius, self.y-self.radius-8, int(bar_w*hp_ratio), 5))
 
 
-def draw_hud(surf, player):
+class Missile(pygame.sprite.Sprite):
+	def __init__(self, x, y, vx, vy, owner=None):
+		super().__init__()
+		self.x = x
+		self.y = y
+		self.vx = vx
+		self.vy = vy
+		self.owner = owner
+		self.radius = 6
+
+	def update(self, dt):
+		self.x += self.vx * dt
+		self.y += self.vy * dt
+		# off-screen
+		if self.x < -100 or self.y < -100 or self.x > WIDTH+100 or self.y > HEIGHT+100:
+			self.kill()
+
+	def draw(self, surf):
+		pygame.draw.circle(surf, (200,120,50), (int(self.x), int(self.y)), self.radius)
+
+
+class Explosion(pygame.sprite.Sprite):
+	def __init__(self, x, y, radius=60, life=0.6):
+		super().__init__()
+		self.x = x
+		self.y = y
+		self.radius = radius
+		self.life = life
+
+	def update(self, dt):
+		self.life -= dt
+		if self.life <= 0:
+			self.kill()
+
+	def draw(self, surf):
+		alpha = max(0, min(255, int(255 * (self.life / 0.6))))
+		s = pygame.Surface((self.radius*2, self.radius*2), pygame.SRCALPHA)
+		pygame.draw.circle(s, (255,140,0, alpha), (self.radius, self.radius), self.radius)
+		surf.blit(s, (int(self.x-self.radius), int(self.y-self.radius)))
+
+
+class Boss(Enemy):
+	def __init__(self, x, y):
+		super().__init__('mercenary', x, y)
+		self.radius = 60
+		self.hp = 5000000
+		self.max_hp = 5000000
+		self.color = (120,20,160)
+		self.shoot_timer = 0.0
+		self.speed = 8.0  # advance much slower
+
+	def update(self, dt, castle):
+		# slow advance to castle
+		dx = castle['x'] - self.x
+		dy = castle['y'] - self.y
+		dist = math.hypot(dx,dy) + 1e-6
+		self.x += dx/dist * self.speed * dt
+		self.y += dy/dist * self.speed * dt
+		# shooting handled externally via spawn in main loop
+
+	def draw(self, surf):
+		# big boss
+		pygame.draw.circle(surf, self.color, (int(self.x), int(self.y)), self.radius)
+		# hp bar above
+		bar_w = 200
+		hp_ratio = max(0, self.hp/self.max_hp)
+		pygame.draw.rect(surf, (50,50,50), (int(self.x-bar_w/2), int(self.y-self.radius-18), bar_w, 8))
+		pygame.draw.rect(surf, (200,30,30), (int(self.x-bar_w/2), int(self.y-self.radius-18), int(bar_w*hp_ratio), 8))
+
+
+class Ally(pygame.sprite.Sprite):
+	def __init__(self, x, y):
+		super().__init__()
+		self.x = x
+		self.y = y
+		self.hp = 1000
+		self.max_hp = 1000
+		self.radius = 10
+		self.color = (180,180,240)
+		self.shoot_cooldown = random.uniform(0.3, 0.9)
+
+	def update(self, dt, player):
+		# follow player loosely
+		# allies will orbit / hold position near the castle; player passed but we ignore it here
+		# keep as-is for compatibility (no movement) unless far from spawn point
+		pass
+
+	def try_shoot(self, dt, mx, my, bullets, firing):
+		# Allies shoot toward the mouse when the player is firing.
+		self.shoot_cooldown -= dt
+		if not firing:
+			return
+		if self.shoot_cooldown > 0:
+			return
+		self.shoot_cooldown = random.uniform(0.12, 0.4)
+		# aim at mouse position
+		dx = mx - self.x
+		dy = my - self.y
+		dist = math.hypot(dx, dy) + 1e-6
+		speed_b = 700
+		vx = dx/dist*speed_b
+		vy = dy/dist*speed_b
+		dmg = 50
+		spawn_x = self.x + dx/dist * (self.radius + 6)
+		spawn_y = self.y + dy/dist * (self.radius + 6)
+		bullets.add(Bullet(spawn_x, spawn_y, vx, vy, dmg))
+
+	def draw(self, surf):
+		# small humanoid
+		pygame.draw.circle(surf, self.color, (int(self.x), int(self.y)), self.radius)
+		# hp bar
+		bar_w = self.radius*2
+		hp_ratio = max(0, self.hp/self.max_hp)
+		pygame.draw.rect(surf, (50,50,50), (self.x-self.radius, self.y-self.radius-8, bar_w, 4))
+		pygame.draw.rect(surf, (100,200,100), (self.x-self.radius, self.y-self.radius-8, int(bar_w*hp_ratio), 4))
+
+
+def draw_hud(surf, player, allies_count=0):
 	# top-left: health, gold, xp, level
 	hx = 8
 	hy = 8
@@ -166,15 +291,60 @@ def draw_hud(surf, player):
 		if owned:
 			surf.blit(FONT.render('(Owned/Upgradable)', True, (180,240,180)), (base_x+320, base_y + i*22))
 
+	# show allies count
+	surf.blit(FONT.render(f'Allies: {allies_count}', True, (200,200,255)), (hx+6, hy+112))
+
+
+def draw_player(surf, player, mx, my):
+	# draw a simple humanoid: head + body and a gun pointing toward mouse
+	angle = math.atan2(my - player.y, mx - player.x)
+	# body
+	body_radius = player.radius
+	head_radius = max(6, player.radius // 2)
+	body_color = player.color
+	head_color = (220, 200, 170)
+	# body circle
+	pygame.draw.circle(surf, body_color, (int(player.x), int(player.y)), body_radius)
+	# head above body
+	head_x = int(player.x)
+	head_y = int(player.y - body_radius - head_radius//2)
+	pygame.draw.circle(surf, head_color, (head_x, head_y), head_radius)
+	# gun
+	gun_length = body_radius + 12
+	gun_width = 6
+	gun_end_x = int(player.x + math.cos(angle) * gun_length)
+	gun_end_y = int(player.y + math.sin(angle) * gun_length)
+	pygame.draw.line(surf, (40,40,40), (int(player.x), int(player.y)), (gun_end_x, gun_end_y), gun_width)
+	# muzzle
+	pygame.draw.circle(surf, (255,200,0), (gun_end_x, gun_end_y), 3)
+
 
 def main():
-	player = Player(WIDTH//2, HEIGHT//2)
+	# castle placed near center; allies will protect it
+	castle = {'x': WIDTH//2, 'y': HEIGHT//2, 'hp': 10000, 'max_hp': 10000, 'radius': 60}
+
+	player = Player(WIDTH//2 + 150, HEIGHT//2 + 150)
 	bullets = pygame.sprite.Group()
 	enemies = pygame.sprite.Group()
+	allies = []
+	missiles = pygame.sprite.Group()
+	explosions = pygame.sprite.Group()
+	boss = None
+	boss_spawned = False
+
+	# spawn 100 allied soldiers around the player
+	# spawn 100 allies arranged in a visible ring around the castle
+	for i in range(100):
+		angle = (i / 100.0) * (2 * math.pi)
+		radius_ring = 90 + (i % 5) * 6
+		rx = castle['x'] + math.cos(angle) * radius_ring
+		ry = castle['y'] + math.sin(angle) * radius_ring
+		allies.append(Ally(rx, ry))
 
 	fire_rate = 0.25  # seconds
 	spawn_timer = 0.0
 	spawn_cooldown = 1.0
+	explosion_damage = 300
 	running = True
 	win = False
 
@@ -233,7 +403,11 @@ def main():
 			vx = dx/dist*speed_b
 			vy = dy/dist*speed_b
 			dmg = player.current_weapon_damage()
-			b = Bullet(player.x + dx/dist*(player.radius+6), player.y + dy/dist*(player.radius+6), vx, vy, dmg)
+			# spawn at gun tip so bullets don't appear from the body
+			gun_length = player.radius + 12
+			spawn_x = player.x + dx/dist * gun_length
+			spawn_y = player.y + dy/dist * gun_length
+			b = Bullet(spawn_x, spawn_y, vx, vy, dmg)
 			bullets.add(b)
 			player.fire_cooldown = fire_rate
 
@@ -247,14 +421,47 @@ def main():
 		cur_cd = max(0.15, spawn_cooldown / (1 + (level_factor-1)*0.2))
 		if spawn_timer <= 0 and not win:
 			spawn_timer = cur_cd
-			# choose type weights
+			# spawn logic: ring formations often, boss on level 5
+			if player.level >= 5 and not boss_spawned:
+				# spawn boss once at a random edge
+				side = random.choice(['top','bottom','left','right'])
+				if side == 'top':
+					bx, by = WIDTH//2, -200
+				elif side == 'bottom':
+					bx, by = WIDTH//2, HEIGHT+200
+				elif side == 'left':
+					bx, by = -200, HEIGHT//2
+				else:
+					bx, by = WIDTH+200, HEIGHT//2
+				boss = Boss(bx, by)
+				enemies.add(boss)
+				boss_spawned = True
+				# also spawn some heavy waves around outer ring
+				for i in range(500):
+					a = random.random() * 2 * math.pi
+					r = 420 + random.randint(-40, 80)
+					x = castle['x'] + math.cos(a) * r
+					y = castle['y'] + math.sin(a) * r
+					enemies.add(Enemy('soldier', x, y))
+				continue
+			# otherwise, sometimes spawn a large ring
+			if random.random() < 0.35:
+				count = 500
+				radius_ring = 300 + player.level * 40
+				for i in range(count):
+					a = (i / count) * (2 * math.pi)
+					x = castle['x'] + math.cos(a) * (radius_ring + random.uniform(-20,20))
+					y = castle['y'] + math.sin(a) * (radius_ring + random.uniform(-20,20))
+					enemies.add(Enemy('soldier', x, y))
+				continue
+			# single spawn fallback
 			if player.level < 3:
-				choices = ['soldier']*85 + ['general']*12 + ['mercenary']*3
+				type_choices = ['soldier']
 			elif player.level < 5:
-				choices = ['soldier']*70 + ['general']*20 + ['mercenary']*10
+				type_choices = ['soldier']*70 + ['general']*20 + ['mercenary']*10
 			else:
-				choices = ['soldier']*55 + ['general']*30 + ['mercenary']*15
-			etype = random.choice(choices)
+				type_choices = ['soldier']*55 + ['general']*30 + ['mercenary']*15
+			type_choice = random.choice(type_choices)
 			# spawn at random edge
 			side = random.choice(['top','bottom','left','right'])
 			if side == 'top':
@@ -269,26 +476,120 @@ def main():
 			else:
 				x = WIDTH + 30
 				y = random.randint(0, HEIGHT)
-			enemies.add(Enemy(etype, x, y))
+			enemies.add(Enemy(type_choice, x, y))
 
 		# update bullets
 		for b in list(bullets):
 			b.update(dt)
 
+		# update missiles
+		for m in list(missiles):
+			m.update(dt)
+			# missile collision with castle/player/allies/enemies -> explode
+			# castle
+			if math.hypot(m.x-castle['x'], m.y-castle['y']) < m.radius + castle['radius']:
+				explosions.add(Explosion(m.x, m.y, radius=80))
+				m.kill()
+				# apply explosion damage below when explosion created
+				continue
+			# player
+			if math.hypot(m.x-player.x, m.y-player.y) < m.radius + player.radius:
+				explosions.add(Explosion(m.x, m.y, radius=80))
+				m.kill()
+				continue
+			# allies
+			for a in list(allies):
+				if math.hypot(m.x-a.x, m.y-a.y) < m.radius + a.radius:
+					explosions.add(Explosion(m.x, m.y, radius=80))
+					m.kill()
+					break
+			# enemies (missile hitting an enemy also explodes)
+			for e2 in list(enemies):
+				if math.hypot(m.x-e2.x, m.y-e2.y) < m.radius + e2.radius:
+					explosions.add(Explosion(m.x, m.y, radius=80))
+					m.kill()
+					break
+
+		# update explosions and apply damage once on creation
+		for ex in list(explosions):
+			ex.update(dt)
+			# apply damage immediately (only once) by checking a flag
+			if getattr(ex, 'applied', False):
+				continue
+			# apply to castle
+			for ent in []:
+				pass
+			# damage castle
+			if math.hypot(ex.x-castle['x'], ex.y-castle['y']) <= ex.radius:
+				castle['hp'] -= explosion_damage
+			# damage player
+			if math.hypot(ex.x-player.x, ex.y-player.y) <= ex.radius:
+				player.health -= explosion_damage
+			# damage allies
+			for a in list(allies):
+				if math.hypot(ex.x-a.x, ex.y-a.y) <= ex.radius:
+					a.hp -= explosion_damage
+					if a.hp <= 0:
+						try:
+							allies.remove(a)
+						except ValueError:
+							pass
+			# damage enemies
+			for e3 in list(enemies):
+				if math.hypot(ex.x-e3.x, ex.y-e3.y) <= ex.radius:
+					e3.hp -= explosion_damage
+					if e3.hp <= 0:
+						r = ENEMY_TYPES[e3.type]
+						player.gold += r['gold']
+						player.xp += r['xp']
+						enemies.remove(e3)
+			# mark applied
+			ex.applied = True
+
+		# update allies (they shoot toward mouse when player fires and die when hp <= 0)
+		for a in list(allies):
+			a.update(dt, player)
+			# allies follow the player's firing direction: pass mx,my and mouse state
+			a.try_shoot(dt, mx, my, bullets, mouse_pressed)
+			if a.hp <= 0:
+				try:
+					allies.remove(a)
+				except ValueError:
+					pass
+
 		# update enemies
 		for e in list(enemies):
-			e.update(dt, player)
-			# collision with player
-			if math.hypot(e.x-player.x, e.y-player.y) < e.radius + player.radius:
-				# damage player
+			e.update(dt, castle)
+			# collision with castle
+			if math.hypot(e.x-castle['x'], e.y-castle['y']) < e.radius + castle['radius']:
 				dmg = ENEMY_TYPES[e.type]['damage']
-				player.health -= dmg
+				castle['hp'] -= dmg
 				# knockback enemy a bit
-				ang = math.atan2(e.y-player.y, e.x-player.x)
+				ang = math.atan2(e.y-castle['y'], e.x-castle['x'])
 				e.x += math.cos(ang)*10
 				e.y += math.sin(ang)*10
-				if player.health <= 0:
+				# if castle falls, game over
+				if castle['hp'] <= 0:
 					running = False
+
+			# collision with allies
+			for a in list(allies):
+				if math.hypot(e.x-a.x, e.y-a.y) < e.radius + a.radius:
+					# enemy and ally trade damage
+					# ally takes enemy damage
+					a.hp -= ENEMY_TYPES[e.type]['damage']
+					# ally deals damage to enemy
+					e.hp -= 50
+					# knockback
+					ang2 = math.atan2(e.y-a.y, e.x-a.x)
+					e.x += math.cos(ang2)*8
+					e.y += math.sin(ang2)*8
+					if a.hp <= 0:
+						try:
+							allies.remove(a)
+						except ValueError:
+							pass
+
 
 		# bullets -> enemies
 		for b in list(bullets):
@@ -318,15 +619,26 @@ def main():
 		# draw
 		SCREEN.fill((34,34,34))
 		# draw player
-		pygame.draw.circle(SCREEN, player.color, (int(player.x), int(player.y)), player.radius)
+		draw_player(SCREEN, player, mx, my)
+		# draw castle
+		castle_rect = pygame.Rect(int(castle['x']-castle['radius']), int(castle['y']-castle['radius']), castle['radius']*2, castle['radius']*2)
+		pygame.draw.rect(SCREEN, (120,80,40), castle_rect)
+		# castle hp bar
+		hp_w = 240
+		hp_ratio = max(0, castle['hp']/castle['max_hp'])
+		pygame.draw.rect(SCREEN, (40,40,40), (WIDTH//2 - hp_w//2, 12, hp_w, 18))
+		pygame.draw.rect(SCREEN, (200,50,50), (WIDTH//2 - hp_w//2, 12, int(hp_w*hp_ratio), 18))
 		# draw bullets
 		for b in bullets:
 			b.draw(SCREEN)
+		# draw allies
+		for a in allies:
+			a.draw(SCREEN)
 		# draw enemies
 		for e in enemies:
 			e.draw(SCREEN)
 
-		draw_hud(SCREEN, player)
+		draw_hud(SCREEN, player, len(allies))
 
 		if win:
 			txt = BIGFONT.render('You beat the war! Congratulations!', True, (240,240,200))
