@@ -89,11 +89,34 @@ class Island:
     def generate_materials(self):
         # Generate random materials on the island
         material_types = ["wood", "rope", "metal", "stone"]
-        for _ in range(random.randint(8, 15)):
-            offset_x = random.randint(-40, 40)
-            offset_y = random.randint(-40, 40)
-            material_type = random.choice(material_types)
-            self.materials.append(Material(self.x + offset_x, self.y + offset_y, material_type))
+
+        # If this is the starting island, ensure there are enough
+        # materials to build a ship locally.
+        if self.is_starting:
+            # Ship requirements (match IslandAdventure.ship_requirements)
+            reqs = {"wood": 20, "rope": 15, "metal": 10, "stone": 12}
+            # Place required materials
+            for mat_type, count in reqs.items():
+                for _ in range(count):
+                    # place within island bounds
+                    angle = random.uniform(0, 2 * math.pi)
+                    r = random.uniform(5, max(5, self.radius - 20))
+                    mx = int(self.x + math.cos(angle) * r)
+                    my = int(self.y + math.sin(angle) * r)
+                    self.materials.append(Material(mx, my, mat_type))
+            # Add a few extras for variety
+            for _ in range(10):
+                angle = random.uniform(0, 2 * math.pi)
+                r = random.uniform(5, max(5, self.radius - 20))
+                mx = int(self.x + math.cos(angle) * r)
+                my = int(self.y + math.sin(angle) * r)
+                self.materials.append(Material(mx, my, random.choice(material_types)))
+        else:
+            for _ in range(random.randint(8, 15)):
+                offset_x = random.randint(-40, 40)
+                offset_y = random.randint(-40, 40)
+                material_type = random.choice(material_types)
+                self.materials.append(Material(self.x + offset_x, self.y + offset_y, material_type))
     
     def draw(self, surface):
         if self.is_starting:
@@ -120,12 +143,15 @@ class Island:
         return distance < self.radius + player.radius
 
 class EnemyEntity:
-    def __init__(self, x, y):
+    def __init__(self, x, y, held_material=None):
         self.x = x
         self.y = y
         self.radius = 8
         self.speed = 2
         self.angle = random.uniform(0, 2 * math.pi)
+        self.health = 30
+        self.max_health = 30
+        self.held_material = held_material
     
     def move(self):
         # Random patrol movement
@@ -133,7 +159,7 @@ class EnemyEntity:
         self.x += math.cos(self.angle) * self.speed
         self.y += math.sin(self.angle) * self.speed
         
-        # Keep in bounds
+        # Keep roughly inside island area (clamp later in update)
         if self.x < 0 or self.x > 1200:
             self.angle = math.pi - self.angle
         if self.y < 0 or self.y > 800:
@@ -145,10 +171,35 @@ class EnemyEntity:
     def draw(self, surface):
         pygame.draw.circle(surface, RED, (int(self.x), int(self.y)), self.radius)
         pygame.draw.circle(surface, YELLOW, (int(self.x), int(self.y)), self.radius, 1)
+        # small health indicator
+        hbw = 16
+        pygame.draw.rect(surface, GREY, (self.x - hbw/2, self.y - 14, hbw, 3))
+        pygame.draw.rect(surface, GREEN, (self.x - hbw/2, self.y - 14, hbw * (self.health/self.max_health), 3))
     
     def check_collision(self, player):
-        distance = math.dist((self.x, self.y), (player.x, player.y))
+        distance = math.hypot(self.x - player.x, self.y - player.y)
         return distance < self.radius + player.radius
+
+
+class Arrow:
+    def __init__(self, x, y, vx, vy):
+        self.x = x
+        self.y = y
+        self.vx = vx
+        self.vy = vy
+        self.radius = 4
+        self.damage = 20
+    
+    def update(self):
+        self.x += self.vx
+        self.y += self.vy
+    
+    def draw(self, surface):
+        # draw as small line with head
+        end_x = int(self.x - self.vx * 0.2)
+        end_y = int(self.y - self.vy * 0.2)
+        pygame.draw.line(surface, BLACK, (int(self.x), int(self.y)), (end_x, end_y), 2)
+        pygame.draw.circle(surface, BLACK, (int(self.x), int(self.y)), self.radius)
 
 class IslandAdventure:
     def __init__(self):
@@ -177,6 +228,8 @@ class IslandAdventure:
         
         # Enemies on current island
         self.enemies = []
+        # Projectiles (arrows)
+        self.arrows = []
         self.spawn_enemies()
     
     def generate_islands(self):
@@ -201,9 +254,16 @@ class IslandAdventure:
     def spawn_enemies(self):
         self.enemies = []
         for _ in range(2 + self.island_index):
-            x = random.randint(100, self.WIDTH - 100)
-            y = random.randint(100, self.HEIGHT - 100)
-            self.enemies.append(EnemyEntity(x, y))
+            # spawn enemies within the current island circle
+            angle = random.uniform(0, 2 * math.pi)
+            r = random.uniform(0, self.current_island.radius - 20)
+            x = int(self.current_island.x + math.cos(angle) * r)
+            y = int(self.current_island.y + math.sin(angle) * r)
+            # give some enemies a held special material
+            held = None
+            if random.random() < 0.35:
+                held = random.choice(["metal", "rope", "wood", "stone"])
+            self.enemies.append(EnemyEntity(x, y, held_material=held))
     
     def show_message(self, text):
         self.message = text
@@ -216,6 +276,9 @@ class IslandAdventure:
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_b:
                     self.try_build_ship()
+                elif event.key == pygame.K_SPACE:
+                    # Attack nearby enemies
+                    self.player_attack()
                 if event.key == pygame.K_r and self.game_over:
                     self.__init__()
         return True
@@ -255,6 +318,16 @@ class IslandAdventure:
         self.game_time += 1
         keys = pygame.key.get_pressed()
         self.player.move(keys, self.WIDTH, self.HEIGHT)
+        # Prevent leaving the island: clamp player inside island circle
+        dx = self.player.x - self.current_island.x
+        dy = self.player.y - self.current_island.y
+        dist = math.hypot(dx, dy)
+        max_dist = self.current_island.radius - self.player.radius - 2
+        if dist > max_dist:
+            # push back to edge
+            ang = math.atan2(dy, dx)
+            self.player.x = self.current_island.x + math.cos(ang) * max_dist
+            self.player.y = self.current_island.y + math.sin(ang) * max_dist
         
         # Collect materials
         for material in self.current_island.materials:
@@ -267,7 +340,7 @@ class IslandAdventure:
         for enemy in self.enemies:
             enemy.move()
             
-            # Combat
+            # Combat on contact
             if enemy.check_collision(self.player):
                 self.player.health -= 0.5
                 if self.player.health <= 0:
@@ -287,9 +360,8 @@ class IslandAdventure:
                 offset = math.sin((x + y + self.game_time / 10) / 100) * 3
                 pygame.draw.line(self.screen, LIGHT_BLUE, (x, y + offset), (x + 40, y + offset), 1)
         
-        # Draw all islands
-        for island in self.islands:
-            island.draw(self.screen)
+        # Draw only the current island (player view)
+        self.current_island.draw(self.screen)
         
         # Draw materials on current island
         self.current_island.draw_materials(self.screen)
@@ -365,6 +437,20 @@ class IslandAdventure:
             self.clock.tick(60)
         
         pygame.quit()
+
+    def player_attack(self):
+        # simple melee attack around player
+        attack_range = 30
+        attack_damage = 15
+        for enemy in self.enemies[:]:
+            if math.hypot(enemy.x - self.player.x, enemy.y - self.player.y) <= attack_range:
+                enemy.health -= attack_damage
+                if enemy.health <= 0:
+                    # enemy drops a special material on death
+                    drop = random.choice(["metal", "rope", "wood", "stone", "metal"])
+                    self.player.materials[drop] = self.player.materials.get(drop, 0) + 1
+                    self.enemies.remove(enemy)
+                    self.show_message(f"Defeated enemy and gained {drop}!")
 
 if __name__ == "__main__":
     game = IslandAdventure()
