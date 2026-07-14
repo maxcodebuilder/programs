@@ -332,10 +332,9 @@ def main():
 	boss = None
 	boss_spawned = False
 
-	# spawn 100 allied soldiers around the player
-	# spawn 100 allies arranged in a visible ring around the castle
-	for i in range(100):
-		angle = (i / 100.0) * (2 * math.pi)
+	# spawn 500 allied soldiers arranged in concentric rings around the castle
+	for i in range(500):
+		angle = (i / 500.0) * (2 * math.pi)
 		radius_ring = 90 + (i % 5) * 6
 		rx = castle['x'] + math.cos(angle) * radius_ring
 		ry = castle['y'] + math.sin(angle) * radius_ring
