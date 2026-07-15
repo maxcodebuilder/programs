@@ -570,16 +570,20 @@ class IslandAdventure:
                 ang = math.atan2(dy, dx)
                 self.player.x = self.current_island.x + math.cos(ang) * max_dist
                 self.player.y = self.current_island.y + math.sin(ang) * max_dist
-            elif self.phase == 'maze':
-                # handle maze-specific updates (portal collision by distance)
-                sx = (self.WIDTH - self.maze_cols * self.maze_cell_size) // 2
-                sy = (self.HEIGHT - self.maze_rows * self.maze_cell_size) // 2
-                gx, gy = self.maze_goal_cell
-                portal_x = sx + gx * self.maze_cell_size + self.maze_cell_size / 2
-                portal_y = sy + gy * self.maze_cell_size + self.maze_cell_size / 2
-                if math.hypot(self.player.x - portal_x, self.player.y - portal_y) <= (self.maze_cell_size * 0.6):
-                    # touched portal -> riddle sequence
-                    self.start_riddle()
+        elif self.phase == 'maze':
+            # handle maze-specific updates (portal collision by distance)
+            sx = (self.WIDTH - self.maze_cols * self.maze_cell_size) // 2
+            sy = (self.HEIGHT - self.maze_rows * self.maze_cell_size) // 2
+            gx, gy = self.maze_goal_cell
+            portal_x = sx + gx * self.maze_cell_size + self.maze_cell_size / 2
+            portal_y = sy + gy * self.maze_cell_size + self.maze_cell_size / 2
+            # Increase portal detection radius for reliability
+            portal_detection_radius = self.maze_cell_size
+            dist_to_portal = math.hypot(self.player.x - portal_x, self.player.y - portal_y)
+            if dist_to_portal <= portal_detection_radius:
+                # touched portal -> riddle sequence
+                self.show_message("Portal activated! Moving to spider...")
+                self.start_riddle()
 
         # Collect materials only when on islands
         if self.phase == 'island':
@@ -662,48 +666,17 @@ class IslandAdventure:
             pygame.draw.ellipse(self.screen, DARK_GREEN, (self.WIDTH//2 - 300, 20, 600, 220))
             pygame.draw.ellipse(self.screen, DARK_BLUE, (self.WIDTH//2 - 300, 40, 600, 220), 6)
 
-            # hull (shaded)
-            hull_top = ship_y
-            hull_points = [
-                (ship_x - 120, hull_top + 30),
-                (ship_x - 80, hull_top + 10),
-                (ship_x + 80, hull_top + 10),
-                (ship_x + 120, hull_top + 30),
-                (ship_x + 60, hull_top + 50),
-                (ship_x - 60, hull_top + 50),
-            ]
-            pygame.draw.polygon(self.screen, BROWN, hull_points)
-            pygame.draw.polygon(self.screen, BLACK, hull_points, 2)
-
-            # deck
-            pygame.draw.rect(self.screen, (120, 70, 30), (ship_x - 70, hull_top - 4, 140, 14))
-
-            # mast
-            mast_x = ship_x
-            mast_top = hull_top - 120
-            pygame.draw.line(self.screen, DARK_GREY, (mast_x, hull_top - 6), (mast_x, mast_top), 6)
-
-            # sails (two square sails + jib) with slight sway
-            sail1 = [(mast_x + 6, mast_top + 20 + sway), (mast_x + 6 + 70, mast_top + 50 + sway), (mast_x + 6, mast_top + 80 + sway)]
-            sail2 = [(mast_x - 4, mast_top + 60 - sway), (mast_x - 4 + 90, mast_top + 95 - sway), (mast_x - 4, mast_top + 130 - sway)]
-            pygame.draw.polygon(self.screen, WHITE, sail1)
-            pygame.draw.polygon(self.screen, BLACK, sail1, 2)
-            pygame.draw.polygon(self.screen, WHITE, sail2)
-            pygame.draw.polygon(self.screen, BLACK, sail2, 2)
-
-            # jib (small triangular sail at bow)
-            jib = [(ship_x + 80, hull_top + 10), (ship_x + 140, hull_top - 10), (mast_x + 6, mast_top + 30 + sway)]
-            pygame.draw.polygon(self.screen, WHITE, jib)
-            pygame.draw.polygon(self.screen, BLACK, jib, 2)
-
-            # flag at top
-            flag_pts = [(mast_x, mast_top - 8), (mast_x + 34, mast_top - 4 + sway * 0.2), (mast_x, mast_top + 4)]
-            pygame.draw.polygon(self.screen, PURPLE, flag_pts)
-
-            # small wake under hull
+            # Draw pre-rendered ship sprite with slight sway
+            sprite = self.ship_sprite
+            if sprite:
+                # apply a small rotation/sway by shifting vertically slightly
+                sway_offset = int(math.sin(self.game_time / 8.0) * 4)
+                rect = sprite.get_rect(center=(ship_x, ship_y + sway_offset))
+                self.screen.blit(sprite, rect)
+            # small wake under hull (procedural) to add motion
             for i in range(-3, 4):
                 wx = ship_x + i * 30
-                wy = hull_top + 70 + (i % 2) * 6
+                wy = ship_y + 70 + (i % 2) * 6
                 pygame.draw.ellipse(self.screen, LIGHT_BLUE, (wx - 18, wy + (i % 2) * 2, 36, 10))
 
             # Message (cutscene text)
@@ -726,10 +699,17 @@ class IslandAdventure:
                     # walls
                     if not cell['open']:
                         pygame.draw.rect(self.screen, BLACK, (cx, cy, self.maze_cell_size, self.maze_cell_size), 2)
-            # draw portal at goal
+            # draw portal at goal with pulsing effect
             gx, gy = self.maze_goal_cell
             px = sx + gx * self.maze_cell_size + self.maze_cell_size // 4
             py = sy + gy * self.maze_cell_size + self.maze_cell_size // 4
+            # pulsing glow
+            pulse = 1.0 + 0.3 * math.sin(self.game_time / 6.0)
+            glow_size = int(self.maze_cell_size // 2 * pulse)
+            glow_x = px - (glow_size - self.maze_cell_size // 2) // 2
+            glow_y = py - (glow_size - self.maze_cell_size // 2) // 2
+            pygame.draw.ellipse(self.screen, CYAN, (glow_x, glow_y, glow_size, glow_size), 1)
+            # solid portal
             pygame.draw.ellipse(self.screen, PURPLE, (px, py, self.maze_cell_size//2, self.maze_cell_size//2))
             # draw player (already positioned)
             self.player.draw(self.screen)
