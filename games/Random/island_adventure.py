@@ -347,6 +347,31 @@ class IslandAdventure:
                     self.game_over = True
                     self.show_message("You were defeated!")
         
+        # Update arrows and check collisions with enemies
+        for arrow in self.arrows[:]:
+            arrow.update()
+            # remove if out of island bounds
+            dx = arrow.x - self.current_island.x
+            dy = arrow.y - self.current_island.y
+            if math.hypot(dx, dy) > self.current_island.radius + 30:
+                try:
+                    self.arrows.remove(arrow)
+                except ValueError:
+                    pass
+                continue
+
+            # Arrow hits enemy
+            for enemy in self.enemies[:]:
+                if math.hypot(enemy.x - arrow.x, enemy.y - arrow.y) <= enemy.radius + arrow.radius:
+                    enemy.health -= arrow.damage
+                    try:
+                        self.arrows.remove(arrow)
+                    except ValueError:
+                        pass
+                    if enemy.health <= 0:
+                        self.enemy_killed(enemy)
+                    break
+
         if self.message_timer > 0:
             self.message_timer -= 1
     
@@ -446,11 +471,31 @@ class IslandAdventure:
             if math.hypot(enemy.x - self.player.x, enemy.y - self.player.y) <= attack_range:
                 enemy.health -= attack_damage
                 if enemy.health <= 0:
-                    # enemy drops a special material on death
-                    drop = random.choice(["metal", "rope", "wood", "stone", "metal"])
-                    self.player.materials[drop] = self.player.materials.get(drop, 0) + 1
-                    self.enemies.remove(enemy)
-                    self.show_message(f"Defeated enemy and gained {drop}!")
+                    self.enemy_killed(enemy)
+
+    def enemy_killed(self, enemy):
+        # enemy may hold a material; drop that preferentially
+        if getattr(enemy, "held_material", None):
+            drop = enemy.held_material
+        else:
+            drop = random.choice(["metal", "rope", "wood", "stone", "metal"])
+        self.player.materials[drop] = self.player.materials.get(drop, 0) + 1
+        try:
+            self.enemies.remove(enemy)
+        except ValueError:
+            pass
+        self.show_message(f"Defeated enemy and gained {drop}!")
+
+    def fire_arrow(self, target_x, target_y):
+        # create an arrow from player toward target
+        dx = target_x - self.player.x
+        dy = target_y - self.player.y
+        dist = math.hypot(dx, dy)
+        if dist == 0:
+            return
+        vx = (dx / dist) * 12
+        vy = (dy / dist) * 12
+        self.arrows.append(Arrow(self.player.x + vx*2, self.player.y + vy*2, vx, vy))
 
 if __name__ == "__main__":
     game = IslandAdventure()
