@@ -1,0 +1,447 @@
+print("High Scores:")
+with open("programs/games/snake/high_scores.txt", "r") as file:
+    scores = file.readlines()
+    for score in scores:
+        print(score.strip())
+        if score.strip() == "":
+            print("No high scores yet.")
+        if score .strip() == "1":
+            print("Congratulations! You have the highest score!")
+        if score.strip() == "2":
+            print("Great job! You are in second place!")
+        if score.strip() == "3":
+            print("Well done! You are in third place!")
+        if score.strip() == "4":
+            print("Good effort! You are in fourth place!")
+        if score.strip() == "5":
+            print("Keep trying! You are in fifth place!")
+        if score.strip() == "6":
+            print("Keep trying! You are in sixth place!")
+        if score.strip() == "7":
+            print("Keep trying! You are in seventh place!")
+        if score.strip() == "8":
+            print("Keep trying! You are in eighth place!")
+        if score.strip() == "9":
+            print("Keep trying! You are in ninth place!")
+        if score.strip() == "10":
+            print("Keep trying! You are in tenth place!")
+        if score.strip() == "11":
+            print("Keep trying! You are in eleventh place!") 
+        if score.strip() == "12":
+            print("Keep trying! You are in twelfth place!")
+        if score.strip() == "13":
+            print("Keep trying! You are in thirteenth place!") 
+        if score.strip() == "14":
+            print("Keep trying! You are in fourteenth place!")
+        if score.strip() == "15":
+            print("Keep trying! You are in fifteenth place!")
+        if score.strip() == "16":
+            print("Keep trying! You are in sixteenth place!")
+        if score.strip() == "17":
+            print("Keep trying! You are in seventeenth place!")
+        if score.strip() == "18":
+            print("Keep trying! You are in eighteenth place!")
+        if score.strip() == "19":
+            print("Keep trying! You are in nineteenth place!")
+        if score.strip() == "20":
+            print("Keep trying! You are in twentieth place!")
+        if score.strip() == "21":
+            print("Keep trying! You are in twenty-first place!")
+        if score.strip() == "22":
+            print("Keep trying! You are in twenty-second place!")
+        if score.strip() == "23":
+            print("Keep trying! You are in twenty-third place!")
+        if score.strip() == "24":
+            print("Keep trying! You are in twenty-fourth place!")
+        if score.strip() == "25":
+            print("Keep trying! You are in twenty-fifth place!")
+        if score.strip() == "26":
+            print("Keep trying! You are in twenty-sixth place!")
+        if score.strip() == "27":
+            print("Keep trying! You are in twenty-seventh place!")
+        if score.strip() == "28":
+            print("Keep trying! You are in twenty-eighth place!")
+        if score.strip() == "29":
+            print("Keep trying! You are in twenty-ninth place!")
+        if score.strip() == "30":
+            print("Keep trying! You are in thirtieth place!")
+        if score.strip() == "31":
+            print("Keep trying! You are in thirty-first place!")
+        if score.strip() == "32":
+            print("Keep trying! You are in thirty-second place!")
+        if score.strip() == "33":
+            print("Keep trying! You are in thirty-third place!")
+        if score.strip() == "34":
+            print("Keep trying! You are in thirty-fourth place!")
+        if score.strip() == "35":
+            print("Keep trying! You are in thirty-fifth place!")
+        if score.strip() == "36":
+            print("Keep trying! You are in thirty-sixth place!")
+        if score.strip() == "37":
+            print("Keep trying! You are in thirty-seventh place!")
+        if score.strip() == "38":
+            print("Keep trying! You are in thirty-eighth place!")
+        if score.strip() == "39":
+            print("Keep trying! You are in thirty-ninth place!")
+        if score.strip() == "40":
+            print("Keep trying! You are in fortieth place!")
+        if score.strip() == "41":
+            print("Keep trying! You are in forty-first place!")
+        if score.strip() == "42":
+            print("Keep trying! You are in forty-second place!")
+        if score.strip() == "43":
+            print("Keep trying! You are in forty-third place!")
+        if score.strip() == "44":
+            print("Keep trying! You are in forty-fourth place!")
+        if score.strip() == "45":
+            print("Keep trying! You are in forty-fifth place!")
+        if score.strip() == "46":
+            print("Keep trying! You are in forty-sixth place!")
+        if score.strip() == "47":
+            print("Keep trying! You are in forty-seventh place!")
+        if score.strip() == "48":
+            print("Keep trying! You are in forty-eighth place!")
+        if score.strip() == "49":
+            print("Keep trying! You are in forty-ninth place!")
+        if score.strip() == "50":
+            print("Keep trying! You are in fiftieth place!")
+        if score.strip() == "51":
+            print("Keep trying! You are in fifty-first place!")
+        if score.strip() == "52":
+            print("Keep trying! You are in fifty-second place!")
+        if score.strip() == "53":
+            print("Keep trying! You are in fifty-third place!")
+        if score.strip() == "54":
+            print("Keep trying! You are in fifty-fourth place!")
+        if score.strip() == "55":
+            print("Keep trying! You are in fifty-fifth place!")
+        if score.strip() == "56":
+            print("Keep trying! You are in fifty-sixth place!")
+        if score.strip() == "57":
+            print("Keep trying! You are in fifty-seventh place!")
+        if score.strip() == "58":
+            print("Keep trying! You are in fifty-eighth place!")
+        if score.strip() == "59":
+            print("Keep trying! You are in fifty-ninth place!")
+        if score.strip() == "60":
+            print("Keep trying! You are in sixtieth place!")
+        if score.strip() == "61":
+            print("Keep trying! You are in sixty-first place!")
+        if score.strip() == "62":
+            print("Keep trying! You are in sixty-second place!")
+        if score.strip() == "63":
+            print("Keep trying! You are in sixty-third place!")
+        if score.strip() == "64":
+            print("Keep trying! You are in sixty-fourth place!")
+        if score.strip() == "65":
+            print("Keep trying! You are in sixty-fifth place!")
+        if score.strip() == "66":
+            print("Keep trying! You are in sixty-sixth place!")
+        if score.strip() == "67":
+            print("Keep trying! You are in sixty-seventh place!")
+        if score.strip() == "68":
+            print("Keep trying! You are in sixty-eighth place!")
+        if score.strip() == "69":
+            print("Keep trying! You are in sixty-ninth place!")
+        if score.strip() == "70":
+            print("Keep trying! You are in seventieth place!")
+        if score.strip() == "71":
+            print("Keep trying! You are in seventy-first place!")
+        if score.strip() == "72":
+            print("Keep trying! You are in seventy-second place!")
+        if score.strip() == "73":
+            print("Keep trying! You are in seventy-third place!")
+        if score.strip() == "74":
+            print("Keep trying! You are in seventy-fourth place!")
+        if score.strip() == "75":
+            print("Keep trying! You are in seventy-fifth place!")
+        if score.strip() == "76":
+            print("Keep trying! You are in seventy-sixth place!")
+        if score.strip() == "77":
+            print("Keep trying! You are in seventy-seventh place!")
+        if score.strip() == "78":
+            print("Keep trying! You are in seventy-eighth place!")
+        if score.strip() == "79":
+            print("Keep trying! You are in seventy-ninth place!")
+        if score.strip() == "80":
+            print("Keep trying! You are in eightieth place!")
+        if score.strip() == "81":
+            print("Keep trying! You are in eighty-first place!")
+        if score.strip() == "82":
+            print("Keep trying! You are in eighty-second place!")
+        if score.strip() == "83":
+            print("Keep trying! You are in eighty-third place!")
+        if score.strip() == "84":
+            print("Keep trying! You are in eighty-fourth place!")
+        if score.strip() == "85":
+            print("Keep trying! You are in eighty-fifth place!")
+        if score.strip() == "86":
+            print("Keep trying! You are in eighty-sixth place!")
+        if score.strip() == "87":
+            print("Keep trying! You are in eighty-seventh place!")
+        if score.strip() == "88":
+            print("Keep trying! You are in eighty-eighth place!")
+        if score.strip() == "89":
+            print("Keep trying! You are in eighty-ninth place!")
+        if score.strip() == "90":
+            print("Keep trying! You are in ninetieth place!")
+        if score.strip() == "91":
+            print("Keep trying! You are in ninety-first place!")
+        if score.strip() == "92":
+            print("Keep trying! You are in ninety-second place!")
+        if score.strip() == "93":
+            print("Keep trying! You are in ninety-third place!")
+        if score.strip() == "94":
+            print("Keep trying! You are in ninety-fourth place!")
+        if score.strip() == "95":
+            print("Keep trying! You are in ninety-fifth place!")
+        if score.strip() == "96":
+            print("Keep trying! You are in ninety-sixth place!")
+        if score.strip() == "97":
+            print("Keep trying! You are in ninety-seventh place!")
+        if score.strip() == "98":
+            print("Keep trying! You are in ninety-eighth place!")
+        if score.strip() == "99":
+            print("Keep trying! You are in ninety-ninth place!")
+        if score.strip() == "100":
+            print("Keep trying! You are in one hundredth place!")
+        if score.strip() == "101":
+            print("Keep trying! You are in one hundred and first place!")
+        if score.strip() == "102":
+            print("Keep trying! You are in one hundred and second place!")
+        if score.strip() == "103":  
+            print("Keep trying! You are in one hundred and third place!")
+        if score.strip() == "104":
+            print("Keep trying! You are in one hundred and fourth place!")
+        if score.strip() == "105":
+            print("Keep trying! You are in one hundred and fifth place!")
+        if score.strip() == "106":
+            print("Keep trying! You are in one hundred and sixth place!")
+        if score.strip() == "107":
+            print("Keep trying! You are in one hundred and seventh place!")
+        if score.strip() == "108":
+            print("Keep trying! You are in one hundred and eighth place!")
+        if score.strip() == "109":
+            print("Keep trying! You are in one hundred and ninth place!")
+        if score.strip() == "110":
+            print("Keep trying! You are in one hundred and tenth place!")
+        if score.strip() == "111":
+            print("Keep trying! You are in one hundred and eleventh place!")
+        if score.strip() == "112":
+            print("Keep trying! You are in one hundred and twelfth place!")
+        if score.strip() == "113":
+            print("Keep trying! You are in one hundred and thirteenth place!")
+        if score.strip() == "114":
+            print("Keep trying! You are in one hundred and fourteenth place!")
+        if score.strip() == "115":
+            print("Keep trying! You are in one hundred and fifteenth place!")
+        if score.strip() == "116":
+            print("Keep trying! You are in one hundred and sixteenth place!")
+        if score.strip() == "117":
+            print("Keep trying! You are in one hundred and seventeenth place!")
+        if score.strip() == "118":
+            print("Keep trying! You are in one hundred and eighteenth place!")
+        if score.strip() == "119":
+            print("Keep trying! You are in one hundred and nineteenth place!")
+        if score.strip() == "120":
+            print("Keep trying! You are in one hundred and twentieth place!")
+        if score.strip() == "121":
+            print("Keep trying! You are in one hundred and twenty-first place!")
+        if score.strip() == "122":
+            print("Keep trying! You are in one hundred and twenty-second place!")
+        if score.strip() == "123":
+            print("Keep trying! You are in one hundred and twenty-third place!")
+        if score.strip() == "124":
+            print("Keep trying! You are in one hundred and twenty-fourth place!")
+        if score.strip() == "125":
+            print("Keep trying! You are in one hundred and twenty-fifth place!")
+        if score.strip() == "126":
+            print("Keep trying! You are in one hundred and twenty-sixth place!")
+        if score.strip() == "127":
+            print("Keep trying! You are in one hundred and twenty-seventh place!")
+        if score.strip() == "128":
+            print("Keep trying! You are in one hundred and twenty-eighth place!")
+        if score.strip() == "129":
+            print("Keep trying! You are in one hundred and twenty-ninth place!")
+        if score.strip() == "130":
+            print("Keep trying! You are in one hundred and thirtieth place!")
+        if score.strip() == "131":
+            print("Keep trying! You are in one hundred and thirty-first place!")
+        if score.strip() == "132":
+            print("Keep trying! You are in one hundred and thirty-second place!")
+        if score.strip() == "133":
+            print("Keep trying! You are in one hundred and thirty-third place!")
+        if score.strip() == "134":
+            print("Keep trying! You are in one hundred and thirty-fourth place!")
+        if score.strip() == "135":
+            print("Keep trying! You are in one hundred and thirty-fifth place!")
+        if score.strip() == "136":
+            print("Keep trying! You are in one hundred and thirty-sixth place!")
+        if score.strip() == "137":
+            print("Keep trying! You are in one hundred and thirty-seventh place!")
+        if score.strip() == "138":
+            print("Keep trying! You are in one hundred and thirty-eighth place!")
+        if score.strip() == "139":
+            print("Keep trying! You are in one hundred and thirty-ninth place!")
+        if score.strip() == "140":
+            print("Keep trying! You are in one hundred and fortieth place!")
+        if score.strip() == "141":
+            print("Keep trying! You are in one hundred and forty-first place!")
+        if score.strip() == "142":
+            print("Keep trying! You are in one hundred and forty-second place!")
+        if score.strip() == "143":
+            print("Keep trying! You are in one hundred and forty-third place!")
+        if score.strip() == "144":
+            print("Keep trying! You are in one hundred and forty-fourth place!")
+        if score.strip() == "145":
+            print("Keep trying! You are in one hundred and forty-fifth place!")
+        if score.strip() == "146":
+            print("Keep trying! You are in one hundred and forty-sixth place!")
+        if score.strip() == "147":
+            print("Keep trying! You are in one hundred and forty-seventh place!")
+        if score.strip() == "148":
+            print("Keep trying! You are in one hundred and forty-eighth place!")
+        if score.strip() == "149":
+            print("Keep trying! You are in one hundred and forty-ninth place!")
+        if score.strip() == "150":
+            print("Keep trying! You are in one hundred and fiftieth place!")
+        if score.strip() == "151":
+            print("Keep trying! You are in one hundred and fifty-first place!")
+        if score.strip() == "152":
+            print("Keep trying! You are in one hundred and fifty-second place!")
+        if score.strip() == "153":
+            print("Keep trying! You are in one hundred and fifty-third place!")
+        if score.strip() == "154":  
+            print("Keep trying! You are in one hundred and fifty-fourth place!")
+        if score.strip() == "155":
+            print("Keep trying! You are in one hundred and fifty-fifth place!")
+        if score.strip() == "156":
+            print("Keep trying! You are in one hundred and fifty-sixth place!")
+        if score.strip() == "157":
+            print("Keep trying! You are in one hundred and fifty-seventh place!")
+        if score.strip() == "158":
+            print("Keep trying! You are in one hundred and fifty-eighth place!")
+        if score.strip() == "159":
+            print("Keep trying! You are in one hundred and fifty-ninth place!")
+        if score.strip() == "160":
+            print("Keep trying! You are in one hundred and sixtieth place!")
+        if score.strip() == "161":
+            print("Keep trying! You are in one hundred and sixty-first place!")
+        if score.strip() == "162":
+            print("Keep trying! You are in one hundred and sixty-second place!")
+        if score.strip() == "163":
+            print("Keep trying! You are in one hundred and sixty-third place!")
+        if score.strip() == "164":
+            print("Keep trying! You are in one hundred and sixty-fourth place!")
+        if score.strip() == "165":
+            print("Keep trying! You are in one hundred and sixty-fifth place!")
+        if score.strip() == "166":
+            print("Keep trying! You are in one hundred and sixty-sixth place!")
+        if score.strip() == "167":
+            print("Keep trying! You are in one hundred and sixty-seventh place!")
+        if score.strip() == "168":
+            print("Keep trying! You are in one hundred and sixty-eighth place!")
+        if score.strip() == "169":
+            print("Keep trying! You are in one hundred and sixty-ninth place!")
+        if score.strip() == "170":
+            print("Keep trying! You are in one hundred and seventieth place!")
+        if score.strip() == "171":
+            print("Keep trying! You are in one hundred and seventy-first place!")
+        if score.strip() == "172":
+            print("Keep trying! You are in one hundred and seventy-second place!")
+        if score.strip() == "173":
+            print("Keep trying! You are in one hundred and seventy-third place!")
+        if score.strip() == "174":
+            print("Keep trying! You are in one hundred and seventy-fourth place!")
+        if score.strip() == "175":
+            print("Keep trying! You are in one hundred and seventy-fifth place!")
+        if score.strip() == "176":
+            print("Keep trying! You are in one hundred and seventy-sixth place!")
+        if score.strip() == "177":
+            print("Keep trying! You are in one hundred and seventy-seventh place!")
+        if score.strip() == "178":
+            print("Keep trying! You are in one hundred and seventy-eighth place!")
+        if score.strip() == "179":
+            print("Keep trying! You are in one hundred and seventy-ninth place!")
+        if score.strip() == "180":
+            print("Keep trying! You are in one hundred and eightieth place!")
+        if score.strip() == "181":
+            print("Keep trying! You are in one hundred and eighty-first place!")
+        if score.strip() == "182":
+            print("Keep trying! You are in one hundred and eighty-second place!")
+        if score.strip() == "183":
+            print("Keep trying! You are in one hundred and eighty-third place!")
+        if score.strip() == "184":
+            print("Keep trying! You are in one hundred and eighty-fourth place!")
+        if score.strip() == "185":
+            print("Keep trying! You are in one hundred and eighty-fifth place!")
+        if score.strip() == "186":
+            print("Keep trying! You are in one hundred and eighty-sixth place!")
+        if score.strip() == "187":
+            print("Keep trying! You are in one hundred and eighty-seventh place!")
+        if score.strip() == "188":
+            print("Keep trying! You are in one hundred and eighty-eighth place!")
+        if score.strip() == "189":
+            print("Keep trying! You are in one hundred and eighty-ninth place!")
+        if score.strip() == "190":
+            print("Keep trying! You are in one hundred and ninetieth place!")
+        if score.strip() == "191":
+            print("Keep trying! You are in one hundred and ninety-first place!")
+        if score.strip() == "192":
+            print("Keep trying! You are in one hundred and ninety-second place!")
+        if score.strip() == "193":
+            print("Keep trying! You are in one hundred and ninety-third place!")
+        if score.strip() == "194":
+            print("Keep trying! You are in one hundred and ninety-fourth place!")
+        if score.strip() == "195":
+            print("Keep trying! You are in one hundred and ninety-fifth place!")
+        if score.strip() == "196":
+            print("Keep trying! You are in one hundred and ninety-sixth place!")
+        if score.strip() == "197":
+            print("Keep trying! You are in one hundred and ninety-seventh place!")
+        if score.strip() == "198":
+            print("Keep trying! You are in one hundred and ninety-eighth place!")
+        if score.strip() == "199":
+            print("Keep trying! You are in one hundred and ninety-ninth place!")
+        if score.strip() == "200":
+            print("Keep trying! You are in two hundredth place!")
+        if score.strip() == "201":
+            print("Keep trying! You are in two hundred and first place!")
+        if score.strip() == "202":
+            print("Keep trying! You are in two hundred and second place!")
+        if score.strip() == "203":
+            print("Keep trying! You are in two hundred and third place!")
+        if score.strip() == "204":
+            print("Keep trying! You are in two hundred and fourth place!")
+        if score.strip() == "205":
+            print("Keep trying! You are in two hundred and fifth place!")
+        if score.strip() == "206":
+            print("Keep trying! You are in two hundred and sixth place!")
+        if score.strip() == "207":
+            print("Keep trying! You are in two hundred and seventh place!")
+        if score.strip() == "208":
+            print("Keep trying! You are in two hundred and eighth place!")
+        if score.strip() == "209":
+            print("Keep trying! You are in two hundred and ninth place!")
+        if score.strip() == "210":
+            print("Keep trying! You are in two hundred and tenth place!")
+        if score.strip() == "211":
+            print("Keep trying! You are in two hundred and eleventh place!")
+        if score.strip() == "212":
+            print("Keep trying! You are in two hundred and twelfth place!")
+        if score.strip() == "213":
+            print("Keep trying! You are in two hundred and thirteenth place!")
+        if score.strip() == "214":
+            print("Keep trying! You are in two hundred and fourteenth place!")
+        if score.strip() == "215":
+            print("Keep trying! You are in two hundred and fifteenth place!")
+        if score.strip() == "216":
+            print("Keep trying! You are in two hundred and sixteenth place!")
+        if score.strip() == "217":
+            print("Keep trying! You are in two hundred and seventeenth place!")
+        if score.strip() == "218":
+            print("Keep trying! You are in two hundred and eighteenth place!")
+        if score.strip() == "219":
+            print("Keep trying! You are in two hundred and nineteenth place!")
+        if score.strip() == "220":
+            print("Keep trying! You are in two hundred and twentieth place!")
